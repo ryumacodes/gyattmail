@@ -1,5 +1,7 @@
 # gyattmail
 
+![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/ryumacodes/gyattmail?utm_source=oss&utm_medium=github&utm_campaign=ryumacodes%2Fgyattmail&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
+
 An open-source, web-only email client with **Paper-Hatch** – a hand-crafted design system featuring cross-hatched borders, paper grain textures, and warm artisanal aesthetics.
 
 > **Mood:** winter-quiet, engraved, tactile
