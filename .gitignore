@@ -48,8 +48,9 @@ Thumbs.db
 *.swo
 *~
 
-# Local data (emails, credentials)
+# Local data (emails, credentials, account storage)
 /data/
+/.data/
 *.db
 *.sqlite
 *.sqlite3

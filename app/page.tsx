@@ -1,9 +1,10 @@
 import { redirect } from 'next/navigation'
-import { accounts } from '@/app/mail/data'
+import { getAllAccounts } from '@/lib/storage/account-storage'
 
-export default function Home() {
+export default async function Home() {
   // Check if user has any connected accounts
-  // TODO: Replace with real account check from backend/database
+  const accounts = await getAllAccounts()
+
   if (accounts.length === 0) {
     redirect('/connect')
   } else {
