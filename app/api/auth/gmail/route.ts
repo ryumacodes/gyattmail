@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create secure server-side session for OAuth flow
-    const sessionId = createOAuthSession('gmail', clientId, clientSecret)
+    const sessionId = await createOAuthSession('gmail', clientId, clientSecret)
 
     // Build Google OAuth2 authorization URL
     const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/gmail/callback`

@@ -73,12 +73,25 @@ export async function getGmailUserEmail(accessToken: string): Promise<string> {
  * Refresh Google access token using refresh token
  *
  * @param refreshToken - Google OAuth2 refresh token
+ * @param clientId - Optional client ID (uses env var if not provided)
+ * @param clientSecret - Optional client secret (uses env var if not provided)
  * @returns New access token
  */
-export async function refreshGmailAccessToken(refreshToken: string): Promise<string> {
-  googleOAuth2Client.setCredentials({ refresh_token: refreshToken })
+export async function refreshGmailAccessToken(
+  refreshToken: string,
+  clientId?: string,
+  clientSecret?: string
+): Promise<string> {
+  // Use provided credentials or fall back to environment variables
+  const oauth2Client = new google.auth.OAuth2(
+    clientId || process.env.GOOGLE_CLIENT_ID,
+    clientSecret || process.env.GOOGLE_CLIENT_SECRET,
+    process.env.GOOGLE_REDIRECT_URI
+  )
 
-  const { credentials } = await googleOAuth2Client.refreshAccessToken()
+  oauth2Client.setCredentials({ refresh_token: refreshToken })
+
+  const { credentials } = await oauth2Client.refreshAccessToken()
 
   if (!credentials.access_token) {
     throw new Error('Failed to refresh access token')
@@ -183,10 +196,16 @@ export async function getOutlookUserEmail(accessToken: string): Promise<string> 
  * Refresh Microsoft access token using refresh token
  *
  * @param refreshToken - Microsoft OAuth2 refresh token
+ * @param clientId - Optional client ID (uses env var if not provided)
+ * @param clientSecret - Optional client secret (uses env var if not provided)
  * @returns New access token
  */
-export async function refreshOutlookAccessToken(refreshToken: string): Promise<string> {
-  const msalClient = getMSALClient()
+export async function refreshOutlookAccessToken(
+  refreshToken: string,
+  clientId?: string,
+  clientSecret?: string
+): Promise<string> {
+  const msalClient = getMSALClient(clientId, clientSecret)
 
   const tokenRequest = {
     refreshToken,

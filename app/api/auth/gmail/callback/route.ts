@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // Retrieve OAuth credentials from secure server-side session
-    const session = consumeOAuthSession(state)
+    const session = await consumeOAuthSession(state)
     if (!session || session.provider !== 'gmail') {
       return NextResponse.redirect(
         new URL(`/mail?error=oauth_failed&provider=gmail&details=Invalid+or+expired+session`, request.url)
@@ -73,6 +73,8 @@ export async function GET(request: NextRequest) {
       accessToken: encrypt(tokens.access_token),
       refreshToken: tokens.refresh_token ? encrypt(tokens.refresh_token) : undefined,
       tokenExpiry: tokens.expiry_date,
+      oauthClientId: encrypt(session.clientId), // Store for token refresh
+      oauthClientSecret: encrypt(session.clientSecret), // Store for token refresh
       label,
       connectionStatus: 'connected',
       createdAt: new Date().toISOString(),

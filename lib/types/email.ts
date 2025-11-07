@@ -20,6 +20,8 @@ export interface EmailAccount {
   accessToken?: string
   refreshToken?: string
   tokenExpiry?: number
+  oauthClientId?: string // Stored encrypted - needed for token refresh
+  oauthClientSecret?: string // Stored encrypted - needed for token refresh
 
   // Custom SMTP fields (stored encrypted)
   smtpHost?: string
