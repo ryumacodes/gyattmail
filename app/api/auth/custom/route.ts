@@ -13,7 +13,11 @@ import { connectCustomIMAP } from '@/lib/email/imap-client'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { email, imapHost, imapPort, smtpHost, smtpPort, password } = body
+    const { email, imapHost, smtpHost, password } = body
+
+    // Parse ports to integers (they may come as strings from JSON)
+    const imapPort = typeof body.imapPort === 'string' ? parseInt(body.imapPort, 10) : body.imapPort
+    const smtpPort = typeof body.smtpPort === 'string' ? parseInt(body.smtpPort, 10) : body.smtpPort
 
     // Validate required fields
     if (!email || !imapHost || !imapPort || !smtpHost || !smtpPort || !password) {
@@ -21,6 +25,17 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error: 'Missing required fields',
+        },
+        { status: 400 }
+      )
+    }
+
+    // Validate ports are valid numbers
+    if (isNaN(imapPort) || isNaN(smtpPort)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Invalid port numbers',
         },
         { status: 400 }
       )

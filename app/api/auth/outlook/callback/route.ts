@@ -11,11 +11,13 @@ import {
 } from '@/lib/email/oauth-manager'
 import { saveAccount, getAccountsByEmail } from '@/lib/storage/account-storage'
 import { encrypt } from '@/lib/storage/encryption'
+import { consumeOAuthSession } from '@/lib/storage/oauth-session'
 import type { EmailAccount } from '@/lib/types/email'
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const code = searchParams.get('code')
+  const state = searchParams.get('state')
   const error = searchParams.get('error')
 
   // User denied access
@@ -32,9 +34,24 @@ export async function GET(request: NextRequest) {
     )
   }
 
+  // No state parameter (session ID)
+  if (!state) {
+    return NextResponse.redirect(
+      new URL(`/mail?error=oauth_failed&provider=outlook&details=Missing+state+parameter`, request.url)
+    )
+  }
+
   try {
-    // Exchange code for tokens
-    const tokens = await getOutlookTokensFromCode(code)
+    // Retrieve OAuth credentials from secure server-side session
+    const session = consumeOAuthSession(state)
+    if (!session || session.provider !== 'outlook') {
+      return NextResponse.redirect(
+        new URL(`/mail?error=oauth_failed&provider=outlook&details=Invalid+or+expired+session`, request.url)
+      )
+    }
+
+    // Exchange code for tokens using user-provided credentials
+    const tokens = await getOutlookTokensFromCode(code, session.clientId, session.clientSecret)
 
     // Get user email address
     const email = await getOutlookUserEmail(tokens.access_token)

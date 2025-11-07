@@ -307,16 +307,22 @@ function GmailConfigForm({ onClose }: { onClose: () => void }) {
     setLoading(true)
 
     try {
-      // Store credentials temporarily and redirect to OAuth
-      sessionStorage.setItem("gmail_client_id", clientId)
-      sessionStorage.setItem("gmail_client_secret", clientSecret)
-
-      // Redirect to Gmail OAuth with these credentials
-      const params = new URLSearchParams({
-        client_id: clientId,
-        client_secret: clientSecret,
+      // POST credentials securely to server
+      const response = await fetch("/api/auth/gmail", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clientId, clientSecret }),
       })
-      window.location.href = `/api/auth/gmail?${params.toString()}`
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || "OAuth initiation failed")
+      }
+
+      const { authorizationUrl } = await response.json()
+
+      // Redirect to Google OAuth
+      window.location.href = authorizationUrl
     } catch (error) {
       console.error("Failed to initiate Gmail OAuth:", error)
       alert("Failed to connect. Please check your credentials.")
@@ -331,7 +337,7 @@ function GmailConfigForm({ onClose }: { onClose: () => void }) {
           📚 Need OAuth credentials?
         </p>
         <ol className="text-xs text-hatch-600 space-y-1 list-decimal list-inside">
-          <li>Go to <a href="https://console.cloud.google.com" target="_blank" className="text-hat-600 hover:underline">Google Cloud Console</a></li>
+          <li>Go to <a href="https://console.cloud.google.com" target="_blank" rel="noopener noreferrer" className="text-hat-600 hover:underline">Google Cloud Console</a></li>
           <li>Create a project and enable Gmail API</li>
           <li>Create OAuth 2.0 credentials (Web application)</li>
           <li>Add redirect URI: <code className="bg-paper-100 px-1 rounded">http://localhost:3000/api/auth/gmail/callback</code></li>
@@ -424,7 +430,7 @@ function OutlookConfigForm({ onClose }: { onClose: () => void }) {
           📚 Need OAuth credentials?
         </p>
         <ol className="text-xs text-hatch-600 space-y-1 list-decimal list-inside">
-          <li>Go to <a href="https://portal.azure.com" target="_blank" className="text-hat-600 hover:underline">Azure Portal</a></li>
+          <li>Go to <a href="https://portal.azure.com" target="_blank" rel="noopener noreferrer" className="text-hat-600 hover:underline">Azure Portal</a></li>
           <li>Register a new application</li>
           <li>Add redirect URI: <code className="bg-paper-100 px-1 rounded">http://localhost:3000/api/auth/outlook/callback</code></li>
           <li>Create a client secret under "Certificates & secrets"</li>

@@ -24,7 +24,7 @@ const OutlookIcon = () => (
   </svg>
 )
 
-const iCloudIcon = () => (
+const ICloudIcon = () => (
   <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <title>iCloud</title>
     <path
@@ -45,11 +45,19 @@ const CustomIcon = () => (
 )
 
 export default async function MailPage() {
-  // Fetch real accounts from storage
-  const storedAccounts = await getAllAccounts()
+  // Fetch real accounts from storage with error handling
+  let storedAccounts
+  try {
+    storedAccounts = await getAllAccounts()
 
-  // Redirect to connect page if no accounts
-  if (storedAccounts.length === 0) {
+    // Redirect to connect page if no accounts
+    if (storedAccounts.length === 0) {
+      const { redirect } = await import('next/navigation')
+      redirect('/connect')
+    }
+  } catch (error) {
+    console.error('Failed to load accounts:', error)
+    // Redirect to connect page on error
     const { redirect } = await import('next/navigation')
     redirect('/connect')
   }
@@ -61,8 +69,8 @@ export default async function MailPage() {
   const defaultLayout = layout ? JSON.parse(layout.value) : undefined
   const defaultCollapsed = collapsed ? JSON.parse(collapsed.value) : undefined
 
-  // Transform to UI Account format
-  const accounts: Account[] = storedAccounts.map((acc) => {
+  // Transform to UI Account format (storedAccounts is guaranteed to be defined and non-empty here)
+  const accounts: Account[] = storedAccounts!.map((acc) => {
     let icon
     switch (acc.provider) {
       case 'gmail':
@@ -74,7 +82,7 @@ export default async function MailPage() {
       case 'custom':
         // Check if it's iCloud based on email domain
         if (acc.email.endsWith('@icloud.com') || acc.email.endsWith('@me.com') || acc.email.endsWith('@mac.com')) {
-          icon = <iCloudIcon />
+          icon = <ICloudIcon />
         } else {
           icon = <CustomIcon />
         }

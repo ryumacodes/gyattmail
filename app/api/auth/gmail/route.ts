@@ -1,28 +1,30 @@
 /**
  * Gmail OAuth2 initiation endpoint
- * Accepts client_id and client_secret from query params (user-provided)
- * or falls back to environment variables
- * Redirects to Google OAuth authorization page
+ * Accepts client_id and client_secret via POST body (secure)
+ * Returns authorization URL for client-side redirect
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { createOAuthSession } from '@/lib/storage/oauth-session'
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const clientId = searchParams.get('client_id') || process.env.GOOGLE_CLIENT_ID
-    const clientSecret = searchParams.get('client_secret') || process.env.GOOGLE_CLIENT_SECRET
+    const body = await request.json()
+    const { clientId, clientSecret } = body
 
     if (!clientId || !clientSecret) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Gmail OAuth credentials not configured',
-          message: 'Please provide client_id and client_secret',
+          error: 'Gmail OAuth credentials not provided',
+          message: 'Please provide clientId and clientSecret',
         },
         { status: 400 }
       )
     }
+
+    // Create secure server-side session for OAuth flow
+    const sessionId = createOAuthSession('gmail', clientId, clientSecret)
 
     // Build Google OAuth2 authorization URL
     const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/gmail/callback`
@@ -35,11 +37,14 @@ export async function GET(request: NextRequest) {
     authUrl.searchParams.set('access_type', 'offline')
     authUrl.searchParams.set('prompt', 'consent')
 
-    // Store credentials in URL state for callback
-    authUrl.searchParams.set('state', Buffer.from(JSON.stringify({ clientId, clientSecret })).toString('base64'))
+    // Use session ID in state (no credentials exposed)
+    authUrl.searchParams.set('state', sessionId)
 
-    // Redirect to Google OAuth
-    return NextResponse.redirect(authUrl.toString())
+    // Return authorization URL for client-side redirect
+    return NextResponse.json({
+      success: true,
+      authorizationUrl: authUrl.toString(),
+    })
   } catch (error) {
     console.error('Failed to initiate Gmail OAuth:', error)
 
