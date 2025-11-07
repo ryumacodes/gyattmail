@@ -45,15 +45,21 @@ const CustomIcon = () => (
 )
 
 export default async function MailPage() {
+  // Fetch real accounts from storage
+  const storedAccounts = await getAllAccounts()
+
+  // Redirect to connect page if no accounts
+  if (storedAccounts.length === 0) {
+    const { redirect } = await import('next/navigation')
+    redirect('/connect')
+  }
+
   const cookieStore = await cookies()
   const layout = cookieStore.get("react-resizable-panels:layout:mail")
   const collapsed = cookieStore.get("react-resizable-panels:collapsed")
 
   const defaultLayout = layout ? JSON.parse(layout.value) : undefined
   const defaultCollapsed = collapsed ? JSON.parse(collapsed.value) : undefined
-
-  // Fetch real accounts from storage
-  const storedAccounts = await getAllAccounts()
 
   // Transform to UI Account format
   const accounts: Account[] = storedAccounts.map((acc) => {

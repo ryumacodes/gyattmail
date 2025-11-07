@@ -10,11 +10,13 @@ import type { EmailMessage } from '@/lib/types/email'
 const DATA_DIR = path.join(process.cwd(), '.data', 'emails')
 
 /**
- * Ensure the email data directory exists
+ * Ensure the email data directory exists with secure permissions
  */
 async function ensureEmailsDir(accountId: string, folder: string): Promise<string> {
   const folderPath = path.join(DATA_DIR, accountId)
   await fs.mkdir(folderPath, { recursive: true })
+  // Set directory permissions to 0700 (owner only)
+  await fs.chmod(folderPath, 0o700)
   return folderPath
 }
 
@@ -54,6 +56,8 @@ export async function saveEmails(
   await ensureEmailsDir(accountId, folder)
   const filePath = getEmailFilePath(accountId, folder)
   await fs.writeFile(filePath, JSON.stringify(emails, null, 2), 'utf-8')
+  // Set file permissions to 0600 (owner read/write only)
+  await fs.chmod(filePath, 0o600)
 }
 
 /**

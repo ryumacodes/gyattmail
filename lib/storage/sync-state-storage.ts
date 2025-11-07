@@ -11,11 +11,13 @@ import type { SyncState } from '@/lib/types/email'
 const SYNC_STATE_FILE = path.join(process.cwd(), '.data', 'sync-state.json')
 
 /**
- * Ensure the .data directory exists
+ * Ensure the .data directory exists with secure permissions
  */
 async function ensureDataDir(): Promise<void> {
   const dataDir = path.dirname(SYNC_STATE_FILE)
   await fs.mkdir(dataDir, { recursive: true })
+  // Set directory permissions to 0700 (owner only)
+  await fs.chmod(dataDir, 0o700)
 }
 
 /**
@@ -39,6 +41,8 @@ async function loadAllSyncStates(): Promise<SyncState[]> {
 async function saveAllSyncStates(states: SyncState[]): Promise<void> {
   await ensureDataDir()
   await fs.writeFile(SYNC_STATE_FILE, JSON.stringify(states, null, 2), 'utf-8')
+  // Set file permissions to 0600 (owner read/write only)
+  await fs.chmod(SYNC_STATE_FILE, 0o600)
 }
 
 /**
