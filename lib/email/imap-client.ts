@@ -18,7 +18,12 @@ export async function connectGmailIMAP(account: EmailAccount): Promise<ImapFlow>
 
   // Refresh access token (they expire after 1 hour)
   const refreshToken = decrypt(account.refreshToken)
-  const accessToken = await refreshGmailAccessToken(refreshToken)
+
+  // Decrypt OAuth credentials if they exist (for user-provided credentials)
+  const clientId = account.oauthClientId ? decrypt(account.oauthClientId) : undefined
+  const clientSecret = account.oauthClientSecret ? decrypt(account.oauthClientSecret) : undefined
+
+  const accessToken = await refreshGmailAccessToken(refreshToken, clientId, clientSecret)
 
   const client = new ImapFlow({
     host: 'imap.gmail.com',
@@ -45,7 +50,12 @@ export async function connectOutlookIMAP(account: EmailAccount): Promise<ImapFlo
 
   // Refresh access token
   const refreshToken = decrypt(account.refreshToken)
-  const accessToken = await refreshOutlookAccessToken(refreshToken)
+
+  // Decrypt OAuth credentials if they exist (for user-provided credentials)
+  const clientId = account.oauthClientId ? decrypt(account.oauthClientId) : undefined
+  const clientSecret = account.oauthClientSecret ? decrypt(account.oauthClientSecret) : undefined
+
+  const accessToken = await refreshOutlookAccessToken(refreshToken, clientId, clientSecret)
 
   const client = new ImapFlow({
     host: 'outlook.office365.com',
