@@ -340,7 +340,8 @@ function GmailConfigForm({ onClose }: { onClose: () => void }) {
           <li>Go to <a href="https://console.cloud.google.com" target="_blank" rel="noopener noreferrer" className="text-hat-600 hover:underline">Google Cloud Console</a></li>
           <li>Create a project and enable Gmail API</li>
           <li>Create OAuth 2.0 credentials (Web application)</li>
-          <li>Add redirect URI: <code className="bg-paper-100 px-1 rounded">http://localhost:3000/api/auth/gmail/callback</code></li>
+          <li>Add Authorized JavaScript origin: <code className="bg-paper-100 px-1 rounded">http://localhost:3000</code></li>
+          <li>Add Authorized redirect URI: <code className="bg-paper-100 px-1 rounded">http://localhost:3000/api/auth/gmail/callback</code></li>
           <li>Copy your Client ID and Client Secret below</li>
         </ol>
       </div>
@@ -431,10 +432,10 @@ function OutlookConfigForm({ onClose }: { onClose: () => void }) {
         </p>
         <ol className="text-xs text-hatch-600 space-y-1 list-decimal list-inside">
           <li>Go to <a href="https://portal.azure.com" target="_blank" rel="noopener noreferrer" className="text-hat-600 hover:underline">Azure Portal</a></li>
-          <li>Register a new application</li>
-          <li>Add redirect URI: <code className="bg-paper-100 px-1 rounded">http://localhost:3000/api/auth/outlook/callback</code></li>
+          <li>Register a new application (App registrations → New registration)</li>
+          <li>Under Authentication, add platform "Web" with redirect URI: <code className="bg-paper-100 px-1 rounded">http://localhost:3000/api/auth/outlook/callback</code></li>
           <li>Create a client secret under "Certificates & secrets"</li>
-          <li>Add API permissions: IMAP.AccessAsUser.All, SMTP.Send, offline_access</li>
+          <li>Add API permissions: IMAP.AccessAsUser.All, SMTP.Send, User.Read, offline_access</li>
         </ol>
       </div>
 
