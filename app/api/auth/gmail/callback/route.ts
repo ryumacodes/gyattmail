@@ -51,7 +51,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Exchange code for tokens using user-provided credentials
-    const tokens = await getGmailTokensFromCode(code, session.clientId, session.clientSecret)
+    const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/gmail/callback`
+    const tokens = await getGmailTokensFromCode(code, session.clientId, session.clientSecret, redirectUri)
 
     // Get user email address
     const email = await getGmailUserEmail(tokens.access_token)

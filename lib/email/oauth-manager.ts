@@ -23,18 +23,22 @@ const googleOAuth2Client = new google.auth.OAuth2(
  * @param code - Authorization code from OAuth callback
  * @param clientId - Optional client ID (uses env var if not provided)
  * @param clientSecret - Optional client secret (uses env var if not provided)
+ * @param redirectUri - Redirect URI (must match what was used in auth URL)
  * @returns OAuth2 tokens including access_token and refresh_token
  */
 export async function getGmailTokensFromCode(
   code: string,
   clientId?: string,
-  clientSecret?: string
+  clientSecret?: string,
+  redirectUri?: string
 ): Promise<OAuth2Tokens> {
   // Use provided credentials or fall back to environment variables
+  const finalRedirectUri = redirectUri || process.env.GOOGLE_REDIRECT_URI || `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/gmail/callback`
+
   const oauth2Client = new google.auth.OAuth2(
     clientId || process.env.GOOGLE_CLIENT_ID,
     clientSecret || process.env.GOOGLE_CLIENT_SECRET,
-    process.env.GOOGLE_REDIRECT_URI || `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/gmail/callback`
+    finalRedirectUri
   )
 
   const { tokens } = await oauth2Client.getToken(code)
@@ -120,14 +124,18 @@ function getMSALClient(clientId?: string, clientSecret?: string): ConfidentialCl
  * @param code - Authorization code from OAuth callback
  * @param clientId - Optional client ID (uses env var if not provided)
  * @param clientSecret - Optional client secret (uses env var if not provided)
+ * @param redirectUri - Redirect URI (must match what was used in auth URL)
  * @returns OAuth2 tokens including access_token and refresh_token
  */
 export async function getOutlookTokensFromCode(
   code: string,
   clientId?: string,
-  clientSecret?: string
+  clientSecret?: string,
+  redirectUri?: string
 ): Promise<OAuth2Tokens> {
   const msalClient = getMSALClient(clientId, clientSecret)
+
+  const finalRedirectUri = redirectUri || process.env.MICROSOFT_REDIRECT_URI || `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/outlook/callback`
 
   const tokenRequest = {
     code,
@@ -137,7 +145,7 @@ export async function getOutlookTokensFromCode(
       'https://outlook.office.com/User.Read',
       'offline_access',
     ],
-    redirectUri: process.env.MICROSOFT_REDIRECT_URI || `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/outlook/callback`,
+    redirectUri: finalRedirectUri,
   }
 
   const response = await msalClient.acquireTokenByCode(tokenRequest)
