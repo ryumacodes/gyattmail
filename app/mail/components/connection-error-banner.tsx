@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { AlertCircle, X, RefreshCw } from "lucide-react"
+import { AlertCircle, X, RefreshCw, LogIn } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -13,6 +13,7 @@ interface ConnectionErrorBannerProps {
   onRetry: () => void
   onDismiss: () => void
   isRetrying?: boolean
+  isOAuthError?: boolean
 }
 
 export function ConnectionErrorBanner({
@@ -22,6 +23,7 @@ export function ConnectionErrorBanner({
   onRetry,
   onDismiss,
   isRetrying = false,
+  isOAuthError = false,
 }: ConnectionErrorBannerProps) {
   return (
     <div className="px-4 my-2">
@@ -31,10 +33,14 @@ export function ConnectionErrorBanner({
           <div className="flex items-center justify-between flex-1 gap-4">
             <div className="flex-1 min-w-0">
               <AlertTitle className="font-serif">
-                Connection Failed: {accountLabel}
+                {isOAuthError ? "Authentication Expired" : "Connection Failed"}: {accountLabel}
               </AlertTitle>
               <AlertDescription className="mt-1 text-xs">
-                <span className="font-medium">{accountEmail}</span> · {error}
+                <span className="font-medium">{accountEmail}</span> · {
+                  isOAuthError
+                    ? "Your login session has expired. Please sign in again."
+                    : error
+                }
               </AlertDescription>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
@@ -51,12 +57,21 @@ export function ConnectionErrorBanner({
                 {isRetrying ? (
                   <>
                     <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
-                    Retrying...
+                    {isOAuthError ? "Redirecting..." : "Retrying..."}
                   </>
                 ) : (
                   <>
-                    <RefreshCw className="h-3 w-3 mr-1" />
-                    Retry
+                    {isOAuthError ? (
+                      <>
+                        <LogIn className="h-3 w-3 mr-1" />
+                        Sign In Again
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                        Retry
+                      </>
+                    )}
                   </>
                 )}
               </Button>

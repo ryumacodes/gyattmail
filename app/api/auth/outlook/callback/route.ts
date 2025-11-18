@@ -61,8 +61,44 @@ export async function GET(request: NextRequest) {
     const existingAccounts = await getAccountsByEmail(email)
     const outlookAccounts = existingAccounts.filter((acc) => acc.provider === 'outlook')
 
+    // Delete any failed accounts to prevent duplicates
+    const { deleteAccount } = await import('@/lib/storage/account-storage')
+    for (const account of outlookAccounts) {
+      if (account.connectionStatus === 'failed') {
+        await deleteAccount(account.id)
+        console.log(`Deleted failed Outlook account: ${account.email}`)
+      }
+    }
+
+    // Re-check after deletion for accurate count
+    const remainingAccounts = await getAccountsByEmail(email)
+    const workingOutlookAccounts = remainingAccounts.filter(
+      (acc) => acc.provider === 'outlook' && acc.connectionStatus !== 'failed'
+    )
+
+    // If a working account already exists, update it with fresh tokens instead of creating duplicate
+    if (workingOutlookAccounts.length > 0) {
+      const existingAccount = workingOutlookAccounts[0]
+      const updatedAccount: EmailAccount = {
+        ...existingAccount,
+        accessToken: encrypt(tokens.access_token),
+        refreshToken: tokens.refresh_token ? encrypt(tokens.refresh_token) : existingAccount.refreshToken,
+        tokenExpiry: tokens.expiry_date,
+        oauthClientId: encrypt(session.clientId),
+        oauthClientSecret: encrypt(session.clientSecret),
+        connectionStatus: 'connected',
+        lastError: undefined,
+      }
+
+      await saveAccount(updatedAccount)
+
+      return NextResponse.redirect(
+        new URL(`/mail?account=updated&email=${encodeURIComponent(email)}`, request.url)
+      )
+    }
+
     // Create unique label for multiple accounts
-    const accountNumber = outlookAccounts.length + 1
+    const accountNumber = workingOutlookAccounts.length + 1
     const label = accountNumber === 1 ? email : `${email} (${accountNumber})`
 
     // Create new account

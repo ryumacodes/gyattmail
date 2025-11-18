@@ -5,8 +5,9 @@
 
 import { ImapFlow } from 'imapflow'
 import type { EmailAccount, IMAPFolder } from '@/lib/types/email'
-import { decrypt } from '@/lib/storage/encryption'
+import { decrypt, encrypt } from '@/lib/storage/encryption'
 import { refreshGmailAccessToken, refreshOutlookAccessToken } from './oauth-manager'
+import { updateAccountTokens } from '@/lib/storage/account-storage'
 
 /**
  * Create IMAP connection for Gmail with OAuth2
@@ -16,14 +17,30 @@ export async function connectGmailIMAP(account: EmailAccount): Promise<ImapFlow>
     throw new Error('Gmail account missing refresh token')
   }
 
-  // Refresh access token (they expire after 1 hour)
-  const refreshToken = decrypt(account.refreshToken)
+  let accessToken: string
 
-  // Decrypt OAuth credentials if they exist (for user-provided credentials)
-  const clientId = account.oauthClientId ? decrypt(account.oauthClientId) : undefined
-  const clientSecret = account.oauthClientSecret ? decrypt(account.oauthClientSecret) : undefined
+  // Check if we have a valid access token
+  const now = Date.now()
+  const tokenExpiry = account.tokenExpiry || 0
+  const isTokenExpired = tokenExpiry - (5 * 60 * 1000) <= now // 5 minute buffer
 
-  const accessToken = await refreshGmailAccessToken(refreshToken, clientId, clientSecret)
+  if (account.accessToken && !isTokenExpired) {
+    // Use existing access token if it's still valid
+    accessToken = decrypt(account.accessToken)
+  } else {
+    // Refresh access token if expired
+    const refreshToken = decrypt(account.refreshToken)
+
+    // Decrypt OAuth credentials if they exist (for user-provided credentials)
+    const clientId = account.oauthClientId ? decrypt(account.oauthClientId) : undefined
+    const clientSecret = account.oauthClientSecret ? decrypt(account.oauthClientSecret) : undefined
+
+    accessToken = await refreshGmailAccessToken(refreshToken, clientId, clientSecret)
+
+    // Save refreshed token to account storage (expires in 1 hour)
+    const tokenExpiry = Date.now() + (3600 * 1000) // 1 hour from now
+    await updateAccountTokens(account.id, encrypt(accessToken), undefined, tokenExpiry)
+  }
 
   const client = new ImapFlow({
     host: 'imap.gmail.com',
@@ -34,6 +51,9 @@ export async function connectGmailIMAP(account: EmailAccount): Promise<ImapFlow>
       accessToken,
     },
     logger: false, // Set to console for debugging
+    connectionTimeout: 30000, // 30 seconds
+    greetingTimeout: 30000, // 30 seconds
+    socketTimeout: 30000, // 30 seconds for socket inactivity
   })
 
   await client.connect()
@@ -48,14 +68,30 @@ export async function connectOutlookIMAP(account: EmailAccount): Promise<ImapFlo
     throw new Error('Outlook account missing refresh token')
   }
 
-  // Refresh access token
-  const refreshToken = decrypt(account.refreshToken)
+  let accessToken: string
 
-  // Decrypt OAuth credentials if they exist (for user-provided credentials)
-  const clientId = account.oauthClientId ? decrypt(account.oauthClientId) : undefined
-  const clientSecret = account.oauthClientSecret ? decrypt(account.oauthClientSecret) : undefined
+  // Check if we have a valid access token
+  const now = Date.now()
+  const tokenExpiry = account.tokenExpiry || 0
+  const isTokenExpired = tokenExpiry - (5 * 60 * 1000) <= now // 5 minute buffer
 
-  const accessToken = await refreshOutlookAccessToken(refreshToken, clientId, clientSecret)
+  if (account.accessToken && !isTokenExpired) {
+    // Use existing access token if it's still valid
+    accessToken = decrypt(account.accessToken)
+  } else {
+    // Refresh access token if expired
+    const refreshToken = decrypt(account.refreshToken)
+
+    // Decrypt OAuth credentials if they exist (for user-provided credentials)
+    const clientId = account.oauthClientId ? decrypt(account.oauthClientId) : undefined
+    const clientSecret = account.oauthClientSecret ? decrypt(account.oauthClientSecret) : undefined
+
+    accessToken = await refreshOutlookAccessToken(refreshToken, clientId, clientSecret)
+
+    // Save refreshed token to account storage (expires in 1 hour)
+    const tokenExpiry = Date.now() + (3600 * 1000) // 1 hour from now
+    await updateAccountTokens(account.id, encrypt(accessToken), undefined, tokenExpiry)
+  }
 
   const client = new ImapFlow({
     host: 'outlook.office365.com',
@@ -66,6 +102,9 @@ export async function connectOutlookIMAP(account: EmailAccount): Promise<ImapFlo
       accessToken,
     },
     logger: false,
+    connectionTimeout: 30000, // 30 seconds
+    greetingTimeout: 30000, // 30 seconds
+    socketTimeout: 30000, // 30 seconds for socket inactivity
   })
 
   await client.connect()

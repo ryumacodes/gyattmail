@@ -6,6 +6,7 @@ import {
   Archive,
   ArchiveX,
   Clock, // Clock icon for Snoozed folder
+  Edit,
   File,
   Inbox,
   MessagesSquare,
@@ -20,6 +21,7 @@ import {
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent } from "@dnd-kit/core"
 
 import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
   ResizableHandle,
@@ -37,6 +39,7 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { AccountSwitcher } from "@/app/mail/components/account-switcher"
 import { AccountPills } from "@/app/mail/components/account-pills"
 import { AddAccountDialog } from "@/app/mail/components/add-account-dialog"
+import { ComposeDialog } from "@/app/mail/components/compose-dialog"
 import { ConnectionErrorBanner } from "@/app/mail/components/connection-error-banner"
 import { KeyboardShortcutsDialog } from "@/app/mail/components/keyboard-shortcuts-dialog"
 import { SettingsDialog } from "@/app/mail/components/settings-dialog"
@@ -49,9 +52,13 @@ import { type Mail } from "@/app/mail/data"
 import { useMail } from "@/app/mail/use-mail"
 import { useMailData } from "@/app/mail/use-mail-data"
 import { useMailActions } from "@/app/mail/use-mail-actions"
+import { useMailSync } from "@/app/mail/use-mail-sync"
+import { useBackgroundSync } from "@/app/mail/use-background-sync"
+import { useLoadEmails } from "@/app/mail/use-load-emails"
 
 interface MailProps {
   accounts: {
+    id: string
     label: string
     email: string
     icon: React.ReactNode
@@ -72,32 +79,99 @@ export function Mail({
   const [isCollapsed, setIsCollapsed] = React.useState(defaultCollapsed)
   const [mail, setMail] = useMail()
   const [allMails] = useMailData()
-  const { toggleStar, addLabel } = useMailActions()
+  const { toggleStar, addLabel, markAsRead, markAsUnread, archiveMail, deleteMail } = useMailActions()
   const [showAddAccountDialog, setShowAddAccountDialog] = React.useState(false)
+  const [showComposeDialog, setShowComposeDialog] = React.useState(false)
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = React.useState(false)
   const [showSettings, setShowSettings] = React.useState(false)
   const [dismissedErrors, setDismissedErrors] = React.useState<Set<string>>(new Set())
   const [retryingAccounts, setRetryingAccounts] = React.useState<Set<string>>(new Set())
   const [activeDragId, setActiveDragId] = React.useState<string | null>(null)
+  const [currentFolder, setCurrentFolder] = React.useState<string>("inbox")
+  const [currentPage, setCurrentPage] = React.useState(1)
+  const [currentPageUnread, setCurrentPageUnread] = React.useState(1)
+  const [itemsPerPage, setItemsPerPage] = React.useState(15)
+  const [composeReplyTo, setComposeReplyTo] = React.useState<{
+    to: string
+    subject: string
+    body: string
+    messageId?: string
+  } | undefined>(undefined)
 
-  // Filter mails for inbox view - exclude archived, deleted, and snoozed
+  // Load emails from backend storage on mount
+  const { isLoading: isLoadingEmails, reload: reloadEmails } = useLoadEmails()
+
+  // Background sync for real-time updates (reloads emails after each sync)
+  useBackgroundSync({ reloadEmails })
+
+  // Filter mails based on current folder
   const mails = allMails.filter(m => {
-    // Exclude archived and deleted
-    if (m.archived || m.deleted) return false
+    const now = new Date()
+    const isSnoozed = m.snoozeUntil && new Date(m.snoozeUntil) > now
 
-    // Exclude snoozed emails that haven't reached their snooze time
-    if (m.snoozeUntil) {
-      const snoozeDate = new Date(m.snoozeUntil)
-      const now = new Date()
-      if (snoozeDate > now) return false
+    switch (currentFolder.toLowerCase()) {
+      case "inbox":
+        // Inbox: exclude archived, deleted, and snoozed
+        return !m.archived && !m.deleted && !isSnoozed
+      case "starred":
+        return m.starred && !m.deleted
+      case "drafts":
+        // TODO: implement drafts
+        return false
+      case "sent":
+        // TODO: implement sent
+        return false
+      case "junk":
+        return (m.labels.includes("Junk") || m.labels.includes("Spam")) && !m.deleted
+      case "trash":
+        return m.deleted
+      case "archive":
+        return m.archived && !m.deleted
+      case "snoozed":
+        return isSnoozed
+      case "social":
+      case "updates":
+      case "forums":
+      case "shopping":
+      case "promotions":
+        // Category folders - check for label
+        const label = currentFolder.charAt(0).toUpperCase() + currentFolder.slice(1)
+        return m.labels.includes(label) && !m.archived && !m.deleted && !isSnoozed
+      default:
+        // Check if it's a custom label
+        const customLabel = currentFolder.charAt(0).toUpperCase() + currentFolder.slice(1)
+        if (m.labels.some(l => l.toLowerCase() === currentFolder.toLowerCase())) {
+          return !m.archived && !m.deleted && !isSnoozed
+        }
+        // Default to inbox view
+        return !m.archived && !m.deleted && !isSnoozed
     }
-
-    return true
   })
 
-  // Count snoozed emails (not yet due to reappear)
+  // Pagination logic for "All" tab
+  const totalMails = mails.length
+  const totalPages = Math.ceil(totalMails / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedMails = mails.slice(startIndex, endIndex)
+
+  // Pagination logic for "Unread" tab
+  const unreadMails = mails.filter((item) => !item.read)
+  const totalUnreadMails = unreadMails.length
+  const totalUnreadPages = Math.ceil(totalUnreadMails / itemsPerPage)
+  const startIndexUnread = (currentPageUnread - 1) * itemsPerPage
+  const endIndexUnread = startIndexUnread + itemsPerPage
+  const paginatedUnreadMails = unreadMails.slice(startIndexUnread, endIndexUnread)
+
+  // Reset to page 1 when folder changes
+  React.useEffect(() => {
+    setCurrentPage(1)
+    setCurrentPageUnread(1)
+  }, [currentFolder])
+
+  // Count snoozed emails (not yet due to reappear) - unread only
   const snoozedCount = allMails.filter(m => {
-    if (!m.snoozeUntil) return false
+    if (!m.snoozeUntil || m.read) return false
     const snoozeDate = new Date(m.snoozeUntil)
     const now = new Date()
     return snoozeDate > now
@@ -110,18 +184,47 @@ export function Mail({
   const handleRetry = async (email: string) => {
     setRetryingAccounts(prev => new Set(prev).add(email))
 
-    // TODO: Implement actual IMAP/SMTP reconnection logic here
-    // Simulating retry for now
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    const account = accounts.find(acc => acc.email === email)
+    if (!account) {
+      setRetryingAccounts(prev => {
+        const next = new Set(prev)
+        next.delete(email)
+        return next
+      })
+      return
+    }
 
-    setRetryingAccounts(prev => {
-      const next = new Set(prev)
-      next.delete(email)
-      return next
-    })
+    // Check if it's an OAuth error that requires re-authentication
+    const isOAuthError = account.lastError?.includes('invalid_grant') ||
+                         account.lastError?.includes('authentication') ||
+                         account.lastError?.includes('unauthorized')
 
-    // For demo: pretend the retry succeeded
-    console.log(`Retried connection for ${email}`)
+    if (isOAuthError) {
+      // Delete the account with invalid token
+      try {
+        await fetch('/api/accounts/delete', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        })
+      } catch (error) {
+        console.error('Failed to delete account:', error)
+      }
+
+      // Redirect to connect page to re-authenticate
+      window.location.href = '/connect'
+    } else {
+      // For non-OAuth errors, try to reconnect (TODO: implement IMAP retry)
+      await new Promise(resolve => setTimeout(resolve, 2000))
+
+      setRetryingAccounts(prev => {
+        const next = new Set(prev)
+        next.delete(email)
+        return next
+      })
+
+      console.log(`Retried connection for ${email}`)
+    }
   }
 
   const handleDismiss = (email: string) => {
@@ -130,6 +233,62 @@ export function Mail({
 
   const handleClearSelection = () => {
     setMail({ ...mail, selectedIds: new Set(), lastSelectedIndex: null })
+  }
+
+  const handleReply = (selectedMail: Mail) => {
+    const replySubject = selectedMail.subject.startsWith("Re:")
+      ? selectedMail.subject
+      : `Re: ${selectedMail.subject}`
+
+    const quotedBody = `\n\n> ${selectedMail.text.split("\n").join("\n> ")}`
+
+    setComposeReplyTo({
+      to: selectedMail.email,
+      subject: replySubject,
+      body: quotedBody,
+      messageId: selectedMail.id,
+    })
+    setShowComposeDialog(true)
+  }
+
+  const handleReplyAll = (selectedMail: Mail) => {
+    const replySubject = selectedMail.subject.startsWith("Re:")
+      ? selectedMail.subject
+      : `Re: ${selectedMail.subject}`
+
+    // Get all recipients (to + cc) excluding our own email
+    const allRecipients = [
+      selectedMail.email,
+      ...(selectedMail.participants || [])
+        .map(p => p.email)
+        .filter(email => email !== selectedMail.email) // Exclude sender duplicates
+    ].join(", ")
+
+    const quotedBody = `\n\n> ${selectedMail.text.split("\n").join("\n> ")}`
+
+    setComposeReplyTo({
+      to: allRecipients,
+      subject: replySubject,
+      body: quotedBody,
+      messageId: selectedMail.id,
+    })
+    setShowComposeDialog(true)
+  }
+
+  const handleForward = (selectedMail: Mail) => {
+    const forwardSubject = selectedMail.subject.startsWith("Fwd:")
+      ? selectedMail.subject
+      : `Fwd: ${selectedMail.subject}`
+
+    const forwardedBody = `\n\n---------- Forwarded message ---------\nFrom: ${selectedMail.name} <${selectedMail.email}>\nDate: ${selectedMail.date}\nSubject: ${selectedMail.subject}\n\n${selectedMail.text}`
+
+    setComposeReplyTo({
+      to: "",
+      subject: forwardSubject,
+      body: forwardedBody,
+      messageId: selectedMail.id,
+    })
+    setShowComposeDialog(true)
   }
 
   // Load fontSize from localStorage on mount
@@ -220,66 +379,79 @@ export function Mail({
         return
       }
 
-      // c - Compose (placeholder for now)
+      // c - Compose
       if (e.key === "c") {
         e.preventDefault()
-        console.log("Compose new mail - TODO")
+        setShowComposeDialog(true)
         return
       }
 
       // r - Reply
       if (e.key === "r" && mail.selected) {
         e.preventDefault()
-        console.log("Reply - TODO")
+        const selectedMail = allMails.find(m => m.id === mail.selected)
+        if (selectedMail) {
+          handleReply(selectedMail)
+        }
         return
       }
 
       // a - Reply all
       if (e.key === "a" && mail.selected) {
         e.preventDefault()
-        console.log("Reply all - TODO")
+        const selectedMail = allMails.find(m => m.id === mail.selected)
+        if (selectedMail) {
+          handleReplyAll(selectedMail)
+        }
         return
       }
 
       // f - Forward
       if (e.key === "f" && mail.selected) {
         e.preventDefault()
-        console.log("Forward - TODO")
+        const selectedMail = allMails.find(m => m.id === mail.selected)
+        if (selectedMail) {
+          handleForward(selectedMail)
+        }
         return
       }
 
       // # - Delete
       if (e.key === "#" && mail.selected) {
         e.preventDefault()
-        console.log("Delete - TODO")
+        deleteMail(mail.selected)
+        setMail({ ...mail, selected: null })
         return
       }
 
       // e - Archive
       if (e.key === "e" && mail.selected) {
         e.preventDefault()
-        console.log("Archive - TODO")
+        archiveMail(mail.selected)
+        setMail({ ...mail, selected: null })
         return
       }
 
       // ! - Mark as spam/junk
       if (e.key === "!" && mail.selected) {
         e.preventDefault()
-        console.log("Mark as spam - TODO")
+        addLabel(mail.selected, "Junk")
+        archiveMail(mail.selected)
+        setMail({ ...mail, selected: null })
         return
       }
 
       // Shift+i - Mark as read
       if (e.key === "I" && mail.selected) {
         e.preventDefault()
-        console.log("Mark as read - TODO")
+        markAsRead(mail.selected)
         return
       }
 
       // Shift+u - Mark as unread
       if (e.key === "U" && mail.selected) {
         e.preventDefault()
-        console.log("Mark as unread - TODO")
+        markAsUnread(mail.selected)
         return
       }
 
@@ -289,11 +461,18 @@ export function Mail({
         toggleStar(mail.selected)
         return
       }
+
+      // v - Toggle focus mode (hide/show mail list when viewing email)
+      if (e.key === "v") {
+        e.preventDefault()
+        setMail({ ...mail, focusMode: !mail.focusMode })
+        return
+      }
     }
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [mail, mails, setMail, toggleStar])
+  }, [mail, mails, allMails, setMail, toggleStar, handleReply, handleReplyAll, handleForward, markAsRead, markAsUnread, archiveMail, deleteMail, addLabel])
 
   return (
     <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
@@ -331,95 +510,105 @@ export function Mail({
           <Separator />
           <Nav
             isCollapsed={isCollapsed}
+            currentFolder={currentFolder}
+            onFolderChange={setCurrentFolder}
             links={[
               {
                 title: "Inbox",
-                label: "128",
+                label: String(allMails.filter(m => !m.archived && !m.deleted && !(m.snoozeUntil && new Date(m.snoozeUntil) > new Date()) && !m.read).length),
                 icon: Inbox,
-                variant: "default",
+                folder: "inbox",
               },
               {
                 title: "Starred",
-                label: String(mails.filter(m => m.starred).length),
+                label: String(allMails.filter(m => m.starred && !m.deleted).length),
                 icon: Star,
-                variant: "ghost",
+                folder: "starred",
               },
               {
                 title: "Drafts",
-                label: "9",
+                label: "0",
                 icon: File,
-                variant: "ghost",
+                folder: "drafts",
               },
               {
                 title: "Sent",
                 label: "",
                 icon: Send,
-                variant: "ghost",
+                folder: "sent",
               },
               {
                 title: "Junk",
-                label: "23",
+                label: String(allMails.filter(m => (m.labels.includes("Junk") || m.labels.includes("Spam")) && !m.read).length),
                 icon: ArchiveX,
-                variant: "ghost",
+                folder: "junk",
               },
               {
                 title: "Trash",
-                label: "",
+                label: String(allMails.filter(m => m.deleted && !m.read).length),
                 icon: Trash2,
-                variant: "ghost",
+                folder: "trash",
               },
               {
                 title: "Archive",
-                label: "",
+                label: String(allMails.filter(m => m.archived && !m.deleted && !m.read).length),
                 icon: Archive,
-                variant: "ghost",
+                folder: "archive",
               },
               {
                 title: "Snoozed",
                 label: String(snoozedCount),
                 icon: Clock,
-                variant: "ghost",
+                folder: "snoozed",
               },
             ]}
           />
           <Separator />
           <Nav
             isCollapsed={isCollapsed}
+            currentFolder={currentFolder}
+            onFolderChange={setCurrentFolder}
             links={[
               {
                 title: "Social",
-                label: "972",
+                label: String(allMails.filter(m => m.labels.includes("Social") && !m.archived && !m.deleted && !m.read).length),
                 icon: Users2,
-                variant: "ghost",
+                folder: "social",
               },
               {
                 title: "Updates",
-                label: "342",
+                label: String(allMails.filter(m => m.labels.includes("Updates") && !m.archived && !m.deleted && !m.read).length),
                 icon: AlertCircle,
-                variant: "ghost",
+                folder: "updates",
               },
               {
                 title: "Forums",
-                label: "128",
+                label: String(allMails.filter(m => m.labels.includes("Forums") && !m.archived && !m.deleted && !m.read).length),
                 icon: MessagesSquare,
-                variant: "ghost",
+                folder: "forums",
               },
               {
                 title: "Shopping",
-                label: "8",
+                label: String(allMails.filter(m => m.labels.includes("Shopping") && !m.archived && !m.deleted && !m.read).length),
                 icon: ShoppingCart,
-                variant: "ghost",
+                folder: "shopping",
               },
               {
                 title: "Promotions",
-                label: "21",
+                label: String(allMails.filter(m => m.labels.includes("Promotions") && !m.archived && !m.deleted && !m.read).length),
                 icon: Archive,
-                variant: "ghost",
+                folder: "promotions",
               },
             ]}
           />
           <Separator />
-          <LabelNav isCollapsed={isCollapsed} mails={mails} />
+          <LabelNav
+            isCollapsed={isCollapsed}
+            mails={allMails}
+            onLabelClick={(label) => {
+              setCurrentFolder(label.toLowerCase())
+            }}
+          />
         </ResizablePanel>
         <ResizableHandle withHandle className="hidden md:flex" />
         <ResizablePanel
@@ -429,8 +618,9 @@ export function Mail({
           className={cn(
             "bg-background",
             // On mobile: hide when mail is selected, show when no mail selected
-            // On desktop: always show
-            mail.selected ? "hidden md:block" : "block"
+            // On desktop: show unless focus mode is enabled
+            mail.selected ? "hidden md:block" : "block",
+            mail.focusMode && mail.selected && "hidden"
           )}
         >
           <Tabs defaultValue="all" className="h-full flex flex-col">
@@ -446,8 +636,16 @@ export function Mail({
                   </TabsTrigger>
                 </TabsList>
                 <button
+                  onClick={() => setShowComposeDialog(true)}
+                  className="ml-3 p-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
+                  aria-label="Compose"
+                  title="Compose new message (C)"
+                >
+                  <Edit className="h-5 w-5" />
+                </button>
+                <button
                   onClick={() => setShowSettings(true)}
-                  className="ml-3 p-2 rounded-lg hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
+                  className="ml-2 p-2 rounded-lg hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
                   aria-label="Settings"
                 >
                   <Settings className="h-5 w-5" />
@@ -455,17 +653,23 @@ export function Mail({
               </div>
               <Separator />
               {/* Connection Error Banners */}
-              {failedAccounts.map((account) => (
-                <ConnectionErrorBanner
-                  key={account.email}
-                  accountLabel={account.label}
-                  accountEmail={account.email}
-                  error={account.lastError || "Connection failed"}
-                  onRetry={() => handleRetry(account.email)}
-                  onDismiss={() => handleDismiss(account.email)}
-                  isRetrying={retryingAccounts.has(account.email)}
-                />
-              ))}
+              {failedAccounts.map((account) => {
+                const isOAuthError = account.lastError?.includes('invalid_grant') ||
+                                     account.lastError?.includes('authentication') ||
+                                     account.lastError?.includes('unauthorized')
+                return (
+                  <ConnectionErrorBanner
+                    key={account.email}
+                    accountLabel={account.label}
+                    accountEmail={account.email}
+                    error={account.lastError || "Connection failed"}
+                    onRetry={() => handleRetry(account.email)}
+                    onDismiss={() => handleDismiss(account.email)}
+                    isRetrying={retryingAccounts.has(account.email)}
+                    isOAuthError={isOAuthError}
+                  />
+                )
+              })}
               <div className="bg-background/95 p-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <form>
                   <div className="relative">
@@ -480,15 +684,77 @@ export function Mail({
                 totalCount={mails.length}
               />
             </div>
-            <TabsContent value="all" className={cn("m-0 flex-1 overflow-y-auto scrollbar-hide", mail.selectedIds.size > 0 && "pt-2")}>
-              <MailList items={mails} />
+            <TabsContent value="all" className={cn("m-0 flex-1 overflow-hidden flex flex-col data-[state=inactive]:hidden", mail.selectedIds.size > 0 && "pt-2")}>
+              <div className="flex-1 overflow-y-auto scrollbar-hide min-h-0">
+                <MailList items={paginatedMails} onReply={handleReply} />
+              </div>
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-t bg-background">
+                  <div className="text-sm text-muted-foreground">
+                    Showing {startIndex + 1}-{Math.min(endIndex, totalMails)} of {totalMails} emails
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </Button>
+                    <div className="text-sm">
+                      Page {currentPage} of {totalPages}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
             </TabsContent>
-            <TabsContent value="unread" className={cn("m-0 flex-1 overflow-y-auto scrollbar-hide", mail.selectedIds.size > 0 && "pt-2")}>
-              <MailList items={mails.filter((item) => !item.read)} />
+            <TabsContent value="unread" className={cn("m-0 flex-1 overflow-hidden flex flex-col data-[state=inactive]:hidden", mail.selectedIds.size > 0 && "pt-2")}>
+              <div className="flex-1 overflow-y-auto scrollbar-hide min-h-0">
+                <MailList items={paginatedUnreadMails} onReply={handleReply} />
+              </div>
+              {/* Pagination Controls */}
+              {totalUnreadPages > 1 && (
+                <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-t bg-background">
+                  <div className="text-sm text-muted-foreground">
+                    Showing {startIndexUnread + 1}-{Math.min(endIndexUnread, totalUnreadMails)} of {totalUnreadMails} unread emails
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPageUnread(p => Math.max(1, p - 1))}
+                      disabled={currentPageUnread === 1}
+                    >
+                      Previous
+                    </Button>
+                    <div className="text-sm">
+                      Page {currentPageUnread} of {totalUnreadPages}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPageUnread(p => Math.min(totalUnreadPages, p + 1))}
+                      disabled={currentPageUnread === totalUnreadPages}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </ResizablePanel>
-        {mail.selected && mails.find((item) => item.id === mail.selected) && (
+        {mail.selected && allMails.find((item) => item.id === mail.selected) && (
           <>
             <ResizableHandle withHandle className="hidden md:flex" />
             <ResizablePanel
@@ -503,7 +769,10 @@ export function Mail({
               )}
             >
               <MailDisplay
-                mail={mails.find((item) => item.id === mail.selected)!}
+                mail={allMails.find((item) => item.id === mail.selected)!}
+                onReply={handleReply}
+                onReplyAll={handleReplyAll}
+                onForward={handleForward}
               />
             </ResizablePanel>
           </>
@@ -512,6 +781,23 @@ export function Mail({
       <AddAccountDialog
         open={showAddAccountDialog}
         onOpenChange={setShowAddAccountDialog}
+      />
+      <ComposeDialog
+        open={showComposeDialog}
+        onOpenChange={(open) => {
+          setShowComposeDialog(open)
+          if (!open) {
+            // Clear reply data when dialog closes
+            setComposeReplyTo(undefined)
+          }
+        }}
+        accounts={accounts.map(acc => ({
+          id: acc.id,
+          email: acc.email,
+          label: acc.label,
+        }))}
+        defaultAccount={accounts[0]?.id}
+        replyTo={composeReplyTo}
       />
       <KeyboardShortcutsDialog
         open={showKeyboardShortcuts}

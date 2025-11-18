@@ -26,6 +26,7 @@ import { AttachmentIndicator } from "@/app/mail/components/attachment-indicator"
 
 interface MailListProps {
   items: Mail[]
+  onReply?: (mail: Mail) => void
 }
 
 interface DraggableMailRowProps {
@@ -71,6 +72,11 @@ function DraggableMailRow({
 }: DraggableMailRowProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: item.id,
+    // Require a small delay or distance before dragging starts
+    // This allows normal clicks to work without interference
+    activationConstraint: {
+      distance: 10, // Drag only starts after moving 10px
+    },
   })
 
   const style = {
@@ -84,11 +90,10 @@ function DraggableMailRow({
         <div
           ref={setNodeRef}
           {...attributes}
-          {...listeners}
           role="button"
           tabIndex={0}
           className={cn(
-            "flex items-start gap-3 rounded-[var(--radius)] border-2 p-3 text-left transition-all relative overflow-hidden cursor-grab active:cursor-grabbing",
+            "flex items-start gap-3 rounded-[var(--radius)] border-2 p-3 text-left transition-all relative overflow-hidden cursor-pointer",
             isSelected && !isViewing && "bg-accent border-primary shadow-sm",
             isViewing && "bg-card border-primary shadow-letterpress",
             !isSelected && !isViewing && "bg-background border-border hover:bg-accent",
@@ -103,6 +108,12 @@ function DraggableMailRow({
             }
           }}
         >
+          {/* Drag handle - only this part enables dragging */}
+          <div
+            {...listeners}
+            className="absolute left-0 top-0 bottom-0 w-2 cursor-grab active:cursor-grabbing hover:bg-primary/20"
+            aria-label="Drag to move"
+          />
           {/* Subtle paper grain on viewing */}
           {isViewing && (
             <div className="absolute inset-0 paper-grain pointer-events-none opacity-50" />
@@ -240,7 +251,7 @@ function DraggableMailRow({
   )
 }
 
-export function MailList({ items }: MailListProps) {
+export function MailList({ items, onReply }: MailListProps) {
   const [mail, setMail] = useMail()
   const { markAsRead, markAsUnread, archiveMail, deleteMail, addLabel, removeLabel, toggleRead, toggleStar } = useMailActions()
   const [labelDialogOpen, setLabelDialogOpen] = React.useState(false)
@@ -301,23 +312,27 @@ export function MailList({ items }: MailListProps) {
       e.preventDefault()
       toggleSelection(mailId, index)
     } else {
-      // Normal click: Select only this item and view email
-      const wasSelected = mail.selectedIds.has(mailId)
+      // Normal click: Toggle email view
+      const isCurrentlyViewing = mail.selected === mailId
 
-      if (wasSelected && mail.selectedIds.size === 1) {
-        // Already selected and only item - toggle email view
-        setMail({
-          ...mail,
-          selected: mail.selected === mailId ? null : mailId,
-        })
-      } else {
-        // Clear selection and view this email
-        setMail({
-          ...mail,
-          selectedIds: new Set(),
-          lastSelectedIndex: null,
-          selected: mailId,
-        })
+      // Always create a completely new object to force re-render
+      setMail({
+        selected: isCurrentlyViewing ? null : mailId,
+        selectedIds: new Set<string>(),
+        lastSelectedIndex: null,
+        fontSize: mail.fontSize,
+        showAvatarStacks: mail.showAvatarStacks,
+        showAttachments: mail.showAttachments,
+        theme: mail.theme,
+        blockRemoteImages: mail.blockRemoteImages,
+      })
+
+      // Auto-mark as read when opening (like Gmail)
+      if (!isCurrentlyViewing) {
+        const mailItem = items.find(m => m.id === mailId)
+        if (mailItem && !mailItem.read) {
+          markAsRead(mailId)
+        }
       }
     }
   }
@@ -329,8 +344,10 @@ export function MailList({ items }: MailListProps) {
 
   const handleReply = (e: React.MouseEvent, mailId: string) => {
     e.stopPropagation()
-    console.log("Reply to mail:", mailId)
-    // TODO: Implement reply functionality
+    const mail = items.find(m => m.id === mailId)
+    if (mail && onReply) {
+      onReply(mail)
+    }
   }
 
   const handleArchive = (e: React.MouseEvent, mailId: string) => {

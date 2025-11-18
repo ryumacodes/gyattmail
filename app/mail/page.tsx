@@ -92,6 +92,7 @@ export default async function MailPage() {
     }
 
     return {
+      id: acc.id,
       label: acc.label || acc.email.split('@')[0],
       email: acc.email,
       icon,

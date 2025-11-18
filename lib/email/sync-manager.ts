@@ -90,8 +90,8 @@ export async function syncFolder(
     const lastSeenUid = syncState?.lastSeenUid || 0
 
     if (lastSeenUid === 0) {
-      // First sync: fetch last 50 messages
-      const startUid = Math.max(1, status.uidNext - 50)
+      // First sync: fetch last 500 messages (or all if less than 500)
+      const startUid = Math.max(1, status.uidNext - 500)
       fetchRange = `${startUid}:*`
 
       onProgress?.({

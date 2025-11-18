@@ -41,6 +41,7 @@ export function SettingsDialog({
     const savedShowAttachments = localStorage.getItem("gyattmail-showAttachments")
     const savedTheme = localStorage.getItem("gyattmail-theme")
     const savedBlockRemoteImages = localStorage.getItem("gyattmail-blockRemoteImages")
+    const savedFocusMode = localStorage.getItem("gyattmail-focusMode")
 
     if (savedShowAvatarStacks !== null) {
       setMail({ ...mail, showAvatarStacks: savedShowAvatarStacks === "true" })
@@ -53,6 +54,9 @@ export function SettingsDialog({
     }
     if (savedBlockRemoteImages !== null) {
       setMail({ ...mail, blockRemoteImages: savedBlockRemoteImages === "true" })
+    }
+    if (savedFocusMode !== null) {
+      setMail({ ...mail, focusMode: savedFocusMode === "true" })
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -80,6 +84,11 @@ export function SettingsDialog({
   const handleBlockRemoteImagesChange = (checked: boolean) => {
     setMail({ ...mail, blockRemoteImages: checked })
     localStorage.setItem("gyattmail-blockRemoteImages", checked.toString())
+  }
+
+  const handleFocusModeChange = (checked: boolean) => {
+    setMail({ ...mail, focusMode: checked })
+    localStorage.setItem("gyattmail-focusMode", checked.toString())
   }
 
   return (
@@ -214,6 +223,26 @@ export function SettingsDialog({
                   id="show-attachments"
                   checked={mail.showAttachments}
                   onCheckedChange={handleShowAttachmentsChange}
+                />
+              </div>
+
+              {/* Focus Mode */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label
+                    htmlFor="focus-mode"
+                    className="text-sm font-medium text-foreground cursor-pointer"
+                  >
+                    Focus mode
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Hide mail list when viewing an email (desktop only, press V to toggle)
+                  </p>
+                </div>
+                <Switch
+                  id="focus-mode"
+                  checked={mail.focusMode}
+                  onCheckedChange={handleFocusModeChange}
                 />
               </div>
             </div>

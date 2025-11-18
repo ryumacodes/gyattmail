@@ -66,7 +66,7 @@ export function getStandardFolders(provider: EmailProvider): string[] {
 }
 
 /**
- * Get essential folders (INBOX, Sent, Drafts) for quick sync
+ * Get essential folders for sync (includes Important, Starred, Spam)
  */
 export function getEssentialFolders(provider: EmailProvider): string[] {
   switch (provider) {
@@ -75,18 +75,25 @@ export function getEssentialFolders(provider: EmailProvider): string[] {
         STANDARD_FOLDERS.gmail.inbox,
         STANDARD_FOLDERS.gmail.sent,
         STANDARD_FOLDERS.gmail.drafts,
+        STANDARD_FOLDERS.gmail.starred,
+        STANDARD_FOLDERS.gmail.important,
+        STANDARD_FOLDERS.gmail.spam,
+        STANDARD_FOLDERS.gmail.allMail,
       ]
     case 'outlook':
       return [
         STANDARD_FOLDERS.outlook.inbox,
         STANDARD_FOLDERS.outlook.sent,
         STANDARD_FOLDERS.outlook.drafts,
+        STANDARD_FOLDERS.outlook.spam,
+        STANDARD_FOLDERS.outlook.archive,
       ]
     case 'custom':
       return [
         STANDARD_FOLDERS.custom.inbox,
         STANDARD_FOLDERS.custom.sent,
         STANDARD_FOLDERS.custom.drafts,
+        STANDARD_FOLDERS.custom.spam,
       ]
   }
 }

@@ -5,12 +5,13 @@
 
 import nodemailer, { type Transporter } from 'nodemailer'
 import type { EmailAccount, SendEmailRequest } from '@/lib/types/email'
-import { decrypt } from '@/lib/storage/encryption'
+import { decrypt, encrypt } from '@/lib/storage/encryption'
 import {
   refreshGmailAccessToken,
   refreshOutlookAccessToken,
   isTokenExpired,
 } from '@/lib/email/oauth-manager'
+import { updateAccountTokens } from '@/lib/storage/account-storage'
 
 /**
  * Create a Nodemailer transporter for Gmail with OAuth2
@@ -23,11 +24,33 @@ export async function createGmailTransporter(account: EmailAccount): Promise<Tra
     throw new Error('Gmail account missing refresh token')
   }
 
-  // Decrypt the refresh token
-  const refreshToken = decrypt(account.refreshToken)
+  let accessToken: string
 
-  // Get a fresh access token
-  const accessToken = await refreshGmailAccessToken(refreshToken)
+  // Check if we have a valid access token
+  const now = Date.now()
+  const tokenExpiry = account.tokenExpiry || 0
+  const isExpired = tokenExpiry - (5 * 60 * 1000) <= now // 5 minute buffer
+
+  if (account.accessToken && !isExpired) {
+    // Use existing access token if it's still valid
+    accessToken = decrypt(account.accessToken)
+  } else {
+    // Refresh access token if expired
+    const refreshToken = decrypt(account.refreshToken)
+
+    // Decrypt OAuth credentials if they exist (for user-provided credentials)
+    const clientId = account.oauthClientId ? decrypt(account.oauthClientId) : undefined
+    const clientSecret = account.oauthClientSecret ? decrypt(account.oauthClientSecret) : undefined
+
+    accessToken = await refreshGmailAccessToken(refreshToken, clientId, clientSecret)
+
+    // Save refreshed token to account storage (expires in 1 hour)
+    const tokenExpiry = Date.now() + (3600 * 1000) // 1 hour from now
+    await updateAccountTokens(account.id, encrypt(accessToken), undefined, tokenExpiry)
+  }
+
+  // Get refresh token for nodemailer config
+  const refreshTokenValue = decrypt(account.refreshToken)
 
   return nodemailer.createTransport({
     service: 'gmail',
@@ -36,7 +59,7 @@ export async function createGmailTransporter(account: EmailAccount): Promise<Tra
       user: account.email,
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      refreshToken,
+      refreshToken: refreshTokenValue,
       accessToken,
     },
   })
@@ -53,11 +76,30 @@ export async function createOutlookTransporter(account: EmailAccount): Promise<T
     throw new Error('Outlook account missing refresh token')
   }
 
-  // Decrypt the refresh token
-  const refreshToken = decrypt(account.refreshToken)
+  let accessToken: string
 
-  // Get a fresh access token
-  const accessToken = await refreshOutlookAccessToken(refreshToken)
+  // Check if we have a valid access token
+  const now = Date.now()
+  const tokenExpiry = account.tokenExpiry || 0
+  const isExpired = tokenExpiry - (5 * 60 * 1000) <= now // 5 minute buffer
+
+  if (account.accessToken && !isExpired) {
+    // Use existing access token if it's still valid
+    accessToken = decrypt(account.accessToken)
+  } else {
+    // Refresh access token if expired
+    const refreshToken = decrypt(account.refreshToken)
+
+    // Decrypt OAuth credentials if they exist (for user-provided credentials)
+    const clientId = account.oauthClientId ? decrypt(account.oauthClientId) : undefined
+    const clientSecret = account.oauthClientSecret ? decrypt(account.oauthClientSecret) : undefined
+
+    accessToken = await refreshOutlookAccessToken(refreshToken, clientId, clientSecret)
+
+    // Save refreshed token to account storage (expires in 1 hour)
+    const tokenExpiry = Date.now() + (3600 * 1000) // 1 hour from now
+    await updateAccountTokens(account.id, encrypt(accessToken), undefined, tokenExpiry)
+  }
 
   // Outlook/Office365 SMTP settings
   return nodemailer.createTransport({
@@ -127,30 +169,35 @@ export async function createTransporter(account: EmailAccount): Promise<Transpor
 export async function sendEmail(account: EmailAccount, request: SendEmailRequest) {
   const transporter = await createTransporter(account)
 
-  const mailOptions = {
-    from: {
-      name: account.label,
-      address: account.email,
-    },
-    to: Array.isArray(request.to) ? request.to.join(', ') : request.to,
-    cc: request.cc?.join(', '),
-    bcc: request.bcc?.join(', '),
-    subject: request.subject,
-    text: request.text,
-    html: request.html,
-    replyTo: request.replyTo,
-    inReplyTo: request.inReplyTo,
-    references: request.references,
-    attachments: request.attachments?.map((att) => ({
-      filename: att.filename,
-      content: Buffer.from(att.content, 'base64'),
-      contentType: att.contentType,
-    })),
+  try {
+    const mailOptions = {
+      from: {
+        name: account.label,
+        address: account.email,
+      },
+      to: Array.isArray(request.to) ? request.to.join(', ') : request.to,
+      cc: request.cc?.join(', '),
+      bcc: request.bcc?.join(', '),
+      subject: request.subject,
+      text: request.text,
+      html: request.html,
+      replyTo: request.replyTo,
+      inReplyTo: request.inReplyTo,
+      references: request.references,
+      attachments: request.attachments?.map((att) => ({
+        filename: att.filename,
+        content: Buffer.from(att.content, 'base64'),
+        contentType: att.contentType,
+      })),
+    }
+
+    const info = await transporter.sendMail(mailOptions)
+
+    return info
+  } finally {
+    // Close the transporter to release the SMTP connection
+    transporter.close()
   }
-
-  const info = await transporter.sendMail(mailOptions)
-
-  return info
 }
 
 /**
@@ -160,13 +207,19 @@ export async function sendEmail(account: EmailAccount, request: SendEmailRequest
  * @returns true if connection successful
  */
 export async function testSmtpConnection(account: EmailAccount): Promise<boolean> {
+  let transporter: Transporter | null = null
   try {
-    const transporter = await createTransporter(account)
+    transporter = await createTransporter(account)
     await transporter.verify()
     return true
   } catch (error) {
     console.error('SMTP connection test failed:', error)
     return false
+  } finally {
+    // Close the transporter to release the SMTP connection
+    if (transporter) {
+      transporter.close()
+    }
   }
 }
 

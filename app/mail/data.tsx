@@ -4,10 +4,12 @@ export const mails: Mail[] = []
 // Explicit type with optional fields to allow runtime updates
 export interface Mail {
   id: string
+  accountId: string // Which account this email belongs to
   name: string
   email: string
   subject: string
   text: string
+  html?: string // HTML content of email (if available)
   date: string
   read: boolean
   labels: string[]

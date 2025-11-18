@@ -10,6 +10,7 @@ export interface BackgroundSyncOptions {
   interval?: number // Sync interval in milliseconds (default: 15 minutes)
   onSyncComplete?: (data: any) => void
   onError?: (error: string) => void
+  reloadEmails?: () => void // Callback to reload emails after sync
 }
 
 const DEFAULT_SYNC_INTERVAL = 15 * 60 * 1000 // 15 minutes
@@ -27,6 +28,7 @@ export function useBackgroundSync(options: BackgroundSyncOptions = {}) {
     interval = DEFAULT_SYNC_INTERVAL,
     onSyncComplete,
     onError,
+    reloadEmails,
   } = options
 
   const performSync = useCallback(async () => {
@@ -48,6 +50,11 @@ export function useBackgroundSync(options: BackgroundSyncOptions = {}) {
         setLastSyncTime(new Date())
         setTotalNewEmails((prev) => prev + (data.totalNewEmails || 0))
         onSyncComplete?.(data)
+
+        // Reload emails from storage after successful sync
+        if (reloadEmails) {
+          reloadEmails()
+        }
       } else {
         const errorMessage = data.error || 'Background sync failed'
         setError(errorMessage)
@@ -64,7 +71,7 @@ export function useBackgroundSync(options: BackgroundSyncOptions = {}) {
         setIsSyncing(false)
       }
     }
-  }, [onSyncComplete, onError])
+  }, [onSyncComplete, onError, reloadEmails])
 
   // Manual sync trigger
   const syncNow = useCallback(() => {
