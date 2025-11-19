@@ -72,11 +72,6 @@ function DraggableMailRow({
 }: DraggableMailRowProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: item.id,
-    // Require a small delay or distance before dragging starts
-    // This allows normal clicks to work without interference
-    activationConstraint: {
-      distance: 10, // Drag only starts after moving 10px
-    },
   })
 
   const style = {
@@ -325,6 +320,7 @@ export function MailList({ items, onReply }: MailListProps) {
         showAttachments: mail.showAttachments,
         theme: mail.theme,
         blockRemoteImages: mail.blockRemoteImages,
+        focusMode: mail.focusMode,
       })
 
       // Auto-mark as read when opening (like Gmail)

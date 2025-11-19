@@ -7,6 +7,7 @@ import { BaseAIProvider } from './providers/base-provider'
 import { GeminiProvider } from './providers/gemini-provider'
 import { OpenAIProvider } from './providers/openai-provider'
 import { OpenRouterProvider } from './providers/openrouter-provider'
+import { ClaudeProvider } from './providers/claude-provider'
 
 /**
  * Get AI configuration from environment or storage
@@ -104,8 +105,7 @@ export function createAIProvider(config: AIConfig): BaseAIProvider {
       return new OpenRouterProvider(config)
 
     case 'claude':
-      // TODO: Implement Claude provider
-      throw new Error('Claude provider not yet implemented')
+      return new ClaudeProvider(config)
 
     default:
       throw new Error(`Unsupported AI provider: ${config.provider}`)
@@ -173,7 +173,7 @@ export async function validateAIConfig(config: AIConfig): Promise<boolean> {
  * Get available AI providers
  */
 export function getAvailableProviders(): AIProvider[] {
-  return ['gemini', 'openai', 'openrouter'] // Add 'claude' when implemented
+  return ['gemini', 'openai', 'openrouter', 'claude']
 }
 
 /**

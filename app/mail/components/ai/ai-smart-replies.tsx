@@ -18,7 +18,7 @@ interface AISmartRepliesProps {
 
 export function AISmartReplies({ mail, onSelectReply }: AISmartRepliesProps) {
   const [loading, setLoading] = React.useState(false)
-  const [replies, setReplies] = React.useState<SmartRepliesResponse['data']['replies']>([])
+  const [replies, setReplies] = React.useState<SmartRepliesResponse['replies']>([])
   const [error, setError] = React.useState<string | null>(null)
 
   const generateReplies = React.useCallback(async () => {
@@ -32,7 +32,7 @@ export function AISmartReplies({ mail, onSelectReply }: AISmartRepliesProps) {
         body: JSON.stringify({
           from: mail.email,
           subject: mail.subject,
-          body: mail.text || mail.snippet || '',
+          body: mail.text || '',
           count: 3,
         }),
       })

@@ -54,7 +54,7 @@ import type { CalendarEvent } from "@/app/mail/utils/ics-parser"
 
 interface MailDisplayProps {
   mail: Mail | undefined
-  onReply?: (mail: Mail) => void
+  onReply?: (mail: Mail, prefilledBody?: string) => void
   onReplyAll?: (mail: Mail) => void
   onForward?: (mail: Mail) => void
 }
@@ -77,7 +77,7 @@ export function MailDisplay({ mail: mailProp, onReply, onReplyAll, onForward }: 
   const [showSnoozeMenu, setShowSnoozeMenu] = React.useState(false)
   const [showLabelDialog, setShowLabelDialog] = React.useState(false)
   const { isConfigured } = useAIConfig()
-  const [aiAnalysis, setAiAnalysis] = React.useState<AnalyzeEmailResponse['data'] | null>(null)
+  const [aiAnalysis, setAiAnalysis] = React.useState<AnalyzeEmailResponse | null>(null)
   const [aiLoading, setAiLoading] = React.useState(false)
 
   const handleBack = () => {
@@ -147,7 +147,7 @@ export function MailDisplay({ mail: mailProp, onReply, onReplyAll, onForward }: 
         body: JSON.stringify({
           from: mailProp.email,
           subject: mailProp.subject,
-          body: mailProp.text || mailProp.snippet || '',
+          body: mailProp.text || '',
           analyzePriority: true,
           analyzeSentiment: true,
           extractActions: true,
@@ -420,8 +420,18 @@ export function MailDisplay({ mail: mailProp, onReply, onReplyAll, onForward }: 
             <DropdownMenuItem onClick={() => setShowLabelDialog(true)}>
               Add label
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => console.log("Mute thread - TODO")}>
-              Mute thread
+            <DropdownMenuItem onClick={() => {
+              if (!mailProp) return
+              const isMuted = mailProp.labels.includes("Muted")
+              if (isMuted) {
+                removeLabel(mailProp.id, "Muted")
+              } else {
+                addLabel(mailProp.id, "Muted")
+                // Archive the thread to remove from inbox
+                archiveMail(mailProp.id)
+              }
+            }}>
+              {mailProp?.labels.includes("Muted") ? "Unmute thread" : "Mute thread"}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -543,8 +553,8 @@ export function MailDisplay({ mail: mailProp, onReply, onReplyAll, onForward }: 
               <AISmartReplies
                 mail={mailProp}
                 onSelectReply={(text) => {
-                  // TODO: Populate reply field with selected text
-                  console.log('Selected reply:', text)
+                  if (!onReply) return
+                  onReply(mailProp, text)
                 }}
               />
             )}

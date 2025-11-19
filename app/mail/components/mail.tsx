@@ -116,11 +116,9 @@ export function Mail({
       case "starred":
         return m.starred && !m.deleted
       case "drafts":
-        // TODO: implement drafts
-        return false
+        return (m.labels.includes("Draft") || m.labels.includes("\\Draft") || m.labels.includes("Drafts")) && !m.deleted
       case "sent":
-        // TODO: implement sent
-        return false
+        return (m.labels.includes("Sent") || m.labels.includes("\\Sent")) && !m.deleted
       case "junk":
         return (m.labels.includes("Junk") || m.labels.includes("Spam")) && !m.deleted
       case "trash":
@@ -214,8 +212,32 @@ export function Mail({
       // Redirect to connect page to re-authenticate
       window.location.href = '/connect'
     } else {
-      // For non-OAuth errors, try to reconnect (TODO: implement IMAP retry)
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      // For non-OAuth errors, try to reconnect with exponential backoff
+      let retrySuccess = false
+      const maxRetries = 3
+
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+          // Wait with exponential backoff: 2s, 4s, 8s
+          const backoffDelay = 2000 * Math.pow(2, attempt)
+          await new Promise(resolve => setTimeout(resolve, backoffDelay))
+
+          // Try to sync emails to test connection
+          const response = await fetch('/api/mail/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accountEmail: email })
+          })
+
+          if (response.ok) {
+            console.log(`Successfully reconnected ${email} on attempt ${attempt + 1}`)
+            retrySuccess = true
+            break
+          }
+        } catch (error) {
+          console.error(`Retry attempt ${attempt + 1} failed for ${email}:`, error)
+        }
+      }
 
       setRetryingAccounts(prev => {
         const next = new Set(prev)
@@ -223,7 +245,13 @@ export function Mail({
         return next
       })
 
-      console.log(`Retried connection for ${email}`)
+      if (retrySuccess) {
+        console.log(`Retried connection for ${email} successfully`)
+        // Refresh the page to reload accounts
+        window.location.reload()
+      } else {
+        console.error(`Failed to reconnect ${email} after ${maxRetries} attempts`)
+      }
     }
   }
 
@@ -235,17 +263,18 @@ export function Mail({
     setMail({ ...mail, selectedIds: new Set(), lastSelectedIndex: null })
   }
 
-  const handleReply = (selectedMail: Mail) => {
+  const handleReply = (selectedMail: Mail, prefilledBody?: string) => {
     const replySubject = selectedMail.subject.startsWith("Re:")
       ? selectedMail.subject
       : `Re: ${selectedMail.subject}`
 
     const quotedBody = `\n\n> ${selectedMail.text.split("\n").join("\n> ")}`
+    const finalBody = prefilledBody || quotedBody
 
     setComposeReplyTo({
       to: selectedMail.email,
       subject: replySubject,
-      body: quotedBody,
+      body: finalBody,
       messageId: selectedMail.id,
     })
     setShowComposeDialog(true)
@@ -518,47 +547,55 @@ export function Mail({
                 label: String(allMails.filter(m => !m.archived && !m.deleted && !(m.snoozeUntil && new Date(m.snoozeUntil) > new Date()) && !m.read).length),
                 icon: Inbox,
                 folder: "inbox",
+                variant: "default" as const,
               },
               {
                 title: "Starred",
                 label: String(allMails.filter(m => m.starred && !m.deleted).length),
                 icon: Star,
                 folder: "starred",
+                variant: "default" as const,
               },
               {
                 title: "Drafts",
                 label: "0",
                 icon: File,
                 folder: "drafts",
+                variant: "default" as const,
               },
               {
                 title: "Sent",
                 label: "",
                 icon: Send,
                 folder: "sent",
+                variant: "default" as const,
               },
               {
                 title: "Junk",
                 label: String(allMails.filter(m => (m.labels.includes("Junk") || m.labels.includes("Spam")) && !m.read).length),
                 icon: ArchiveX,
                 folder: "junk",
+                variant: "default" as const,
               },
               {
                 title: "Trash",
                 label: String(allMails.filter(m => m.deleted && !m.read).length),
                 icon: Trash2,
                 folder: "trash",
+                variant: "default" as const,
               },
               {
                 title: "Archive",
                 label: String(allMails.filter(m => m.archived && !m.deleted && !m.read).length),
                 icon: Archive,
                 folder: "archive",
+                variant: "default" as const,
               },
               {
                 title: "Snoozed",
                 label: String(snoozedCount),
                 icon: Clock,
+                variant: "default" as const,
                 folder: "snoozed",
               },
             ]}
@@ -574,30 +611,35 @@ export function Mail({
                 label: String(allMails.filter(m => m.labels.includes("Social") && !m.archived && !m.deleted && !m.read).length),
                 icon: Users2,
                 folder: "social",
+                variant: "ghost" as const,
               },
               {
                 title: "Updates",
                 label: String(allMails.filter(m => m.labels.includes("Updates") && !m.archived && !m.deleted && !m.read).length),
                 icon: AlertCircle,
                 folder: "updates",
+                variant: "ghost" as const,
               },
               {
                 title: "Forums",
                 label: String(allMails.filter(m => m.labels.includes("Forums") && !m.archived && !m.deleted && !m.read).length),
                 icon: MessagesSquare,
                 folder: "forums",
+                variant: "ghost" as const,
               },
               {
                 title: "Shopping",
                 label: String(allMails.filter(m => m.labels.includes("Shopping") && !m.archived && !m.deleted && !m.read).length),
                 icon: ShoppingCart,
                 folder: "shopping",
+                variant: "ghost" as const,
               },
               {
                 title: "Promotions",
                 label: String(allMails.filter(m => m.labels.includes("Promotions") && !m.archived && !m.deleted && !m.read).length),
                 icon: Archive,
                 folder: "promotions",
+                variant: "ghost" as const,
               },
             ]}
           />

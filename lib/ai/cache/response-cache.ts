@@ -33,6 +33,34 @@ const labelsCache = new LRUCache<string, AIResponse>({
   ttl: 1000 * 60 * 60 * 24 * 30, // 30 days for labels (very stable)
 })
 
+// Cache hit/miss tracking
+const cacheStats = new Map<CacheOperation, { hits: number; misses: number }>()
+
+function initStatForOperation(operation: CacheOperation) {
+  if (!cacheStats.has(operation)) {
+    cacheStats.set(operation, { hits: 0, misses: 0 })
+  }
+}
+
+function recordCacheHit(operation: CacheOperation) {
+  initStatForOperation(operation)
+  const stats = cacheStats.get(operation)!
+  stats.hits++
+}
+
+function recordCacheMiss(operation: CacheOperation) {
+  initStatForOperation(operation)
+  const stats = cacheStats.get(operation)!
+  stats.misses++
+}
+
+function getCacheHitRate(operation: CacheOperation): number {
+  initStatForOperation(operation)
+  const stats = cacheStats.get(operation)!
+  const total = stats.hits + stats.misses
+  return total === 0 ? 0 : stats.hits / total
+}
+
 /**
  * Operation type for cache selection
  */
@@ -108,6 +136,7 @@ export function getCachedResponse<T = any>(
   const cached = cache.get(key)
 
   if (cached) {
+    recordCacheHit(operation)
     // Mark response as coming from cache
     return {
       ...cached,
@@ -116,6 +145,7 @@ export function getCachedResponse<T = any>(
     } as AIResponse<T>
   }
 
+  recordCacheMiss(operation)
   return undefined
 }
 
@@ -160,20 +190,43 @@ export function clearCache(operation?: CacheOperation): void {
 export function getCacheStats(operation?: CacheOperation) {
   if (operation) {
     const cache = getCacheForOperation(operation)
+    const stats = cacheStats.get(operation)
     return {
       operation,
       size: cache.size,
       max: cache.max,
-      hitRate: 0, // TODO: Implement hit rate tracking
+      hitRate: getCacheHitRate(operation),
+      hits: stats?.hits || 0,
+      misses: stats?.misses || 0,
     }
   }
 
   return {
-    summarize: { size: summarizeCache.size, max: summarizeCache.max },
-    draft: { size: draftCache.size, max: draftCache.max },
-    replies: { size: repliesCache.size, max: repliesCache.max },
-    analyze: { size: analyzeCache.size, max: analyzeCache.max },
-    labels: { size: labelsCache.size, max: labelsCache.max },
+    summarize: {
+      size: summarizeCache.size,
+      max: summarizeCache.max,
+      hitRate: getCacheHitRate('summarize')
+    },
+    draft: {
+      size: draftCache.size,
+      max: draftCache.max,
+      hitRate: getCacheHitRate('draft')
+    },
+    replies: {
+      size: repliesCache.size,
+      max: repliesCache.max,
+      hitRate: getCacheHitRate('replies')
+    },
+    analyze: {
+      size: analyzeCache.size,
+      max: analyzeCache.max,
+      hitRate: getCacheHitRate('analyze')
+    },
+    labels: {
+      size: labelsCache.size,
+      max: labelsCache.max,
+      hitRate: getCacheHitRate('labels')
+    },
   }
 }
 

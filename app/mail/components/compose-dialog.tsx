@@ -290,7 +290,11 @@ export function ComposeDialog({
                     onBodyChange={setBody}
                     to={to}
                     subject={subject}
-                    replyTo={replyTo}
+                    replyTo={replyTo ? {
+                      from: replyTo.to,
+                      subject: replyTo.subject,
+                      body: replyTo.body
+                    } : undefined}
                   />
                 )}
                 <Textarea

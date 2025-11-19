@@ -148,6 +148,7 @@ export function AISettingsPanel() {
             <SelectItem value="gemini">{getProviderDisplayName('gemini')}</SelectItem>
             <SelectItem value="openai">{getProviderDisplayName('openai')}</SelectItem>
             <SelectItem value="openrouter">{getProviderDisplayName('openrouter')}</SelectItem>
+            <SelectItem value="claude">{getProviderDisplayName('claude')}</SelectItem>
           </SelectContent>
         </Select>
         <p className="mt-1.5 text-xs text-ink-500">

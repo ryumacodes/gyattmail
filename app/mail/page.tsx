@@ -70,7 +70,7 @@ export default async function MailPage() {
   const defaultCollapsed = collapsed ? JSON.parse(collapsed.value) : undefined
 
   // Transform to UI Account format (storedAccounts is guaranteed to be defined and non-empty here)
-  const accounts: Account[] = storedAccounts!.map((acc) => {
+  const accounts = storedAccounts!.map((acc) => {
     let icon
     switch (acc.provider) {
       case 'gmail':
@@ -97,6 +97,7 @@ export default async function MailPage() {
       email: acc.email,
       icon,
       connectionStatus: acc.connectionStatus,
+      lastError: acc.lastError,
     }
   })
 
