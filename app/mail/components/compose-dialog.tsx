@@ -30,7 +30,7 @@ interface ComposeDialogProps {
   defaultAccount?: string
   // For replies/forwards
   replyTo?: {
-    to: string
+    from: string
     subject: string
     body: string
     messageId?: string
@@ -68,11 +68,11 @@ export function ComposeDialog({
   // Update form when replyTo changes
   React.useEffect(() => {
     if (replyTo) {
-      setTo(replyTo.to)
+      setTo(replyTo.from)
       setSubject(replyTo.subject)
       setBody(replyTo.body)
       // Show Cc/Bcc if they have recipients in replyTo
-      setShowCc(replyTo.to.includes(","))
+      setShowCc(replyTo.from.includes(","))
       setShowBcc(false)
     }
   }, [replyTo])
@@ -290,11 +290,7 @@ export function ComposeDialog({
                     onBodyChange={setBody}
                     to={to}
                     subject={subject}
-                    replyTo={replyTo ? {
-                      from: replyTo.to,
-                      subject: replyTo.subject,
-                      body: replyTo.body
-                    } : undefined}
+                    replyTo={replyTo}
                   />
                 )}
                 <Textarea

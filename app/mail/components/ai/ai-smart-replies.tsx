@@ -43,7 +43,7 @@ export function AISmartReplies({ mail, onSelectReply }: AISmartRepliesProps) {
         throw new Error(data.error || 'Failed to generate replies')
       }
 
-      setReplies(data.data.replies || [])
+      setReplies(data.replies || [])
     } catch (err) {
       console.error('Smart replies error:', err)
       setError(err instanceof Error ? err.message : 'Failed to generate replies')

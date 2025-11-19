@@ -139,8 +139,10 @@ export function MailDisplay({ mail: mailProp, onReply, onReplyAll, onForward }: 
   const fetchAIAnalysis = React.useCallback(async () => {
     if (!mailProp || !isConfigured) return
 
+    setAiLoading(true)
+    setAiAnalysis(null)
+
     try {
-      setAiLoading(true)
       const response = await fetch('/api/ai/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -158,10 +160,15 @@ export function MailDisplay({ mail: mailProp, onReply, onReplyAll, onForward }: 
       const data = await response.json()
 
       if (response.ok && data.success) {
-        setAiAnalysis(data.data)
+        // Extract analysis data (API returns { success: true, ...AnalyzeEmailResponse })
+        const { success, ...analysis } = data
+        setAiAnalysis(analysis)
+      } else {
+        setAiAnalysis(null)
       }
     } catch (error) {
       console.error('AI analysis error:', error)
+      setAiAnalysis(null)
     } finally {
       setAiLoading(false)
     }

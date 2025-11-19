@@ -56,8 +56,14 @@ export default async function MailPage() {
       redirect('/connect')
     }
   } catch (error) {
+    // Re-throw NEXT_REDIRECT errors (they're not actual errors)
+    if (error && typeof error === 'object' && 'digest' in error &&
+        typeof error.digest === 'string' && error.digest.startsWith('NEXT_REDIRECT')) {
+      throw error
+    }
+
     console.error('Failed to load accounts:', error)
-    // Redirect to connect page on error
+    // Redirect to connect page on actual errors
     const { redirect } = await import('next/navigation')
     redirect('/connect')
   }

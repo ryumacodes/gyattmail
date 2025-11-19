@@ -27,9 +27,8 @@ export function AISettingsPanel() {
     config,
     loading,
     isConfigured,
-    changeProvider,
-    changeModel,
-    setAPIKey,
+    updateConfig,
+    availableProviders,
     getModelsForProvider,
   } = useAIConfig()
 
@@ -72,22 +71,15 @@ export function AISettingsPanel() {
     try {
       setSaving(true)
 
-      // Save provider
-      const providerSuccess = await changeProvider(selectedProvider)
-      if (!providerSuccess) {
-        throw new Error('Failed to save provider')
-      }
+      // Save all settings atomically
+      const success = await updateConfig({
+        provider: selectedProvider,
+        model: selectedModel,
+        apiKey,
+      })
 
-      // Save model
-      const modelSuccess = await changeModel(selectedModel)
-      if (!modelSuccess) {
-        throw new Error('Failed to save model')
-      }
-
-      // Save API key
-      const keySuccess = await setAPIKey(apiKey)
-      if (!keySuccess) {
-        throw new Error('Failed to save API key')
+      if (!success) {
+        throw new Error('Failed to save AI settings')
       }
 
       toast.success('AI settings saved successfully!')
@@ -145,10 +137,11 @@ export function AISettingsPanel() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="gemini">{getProviderDisplayName('gemini')}</SelectItem>
-            <SelectItem value="openai">{getProviderDisplayName('openai')}</SelectItem>
-            <SelectItem value="openrouter">{getProviderDisplayName('openrouter')}</SelectItem>
-            <SelectItem value="claude">{getProviderDisplayName('claude')}</SelectItem>
+            {availableProviders.map((provider) => (
+              <SelectItem key={provider} value={provider}>
+                {getProviderDisplayName(provider)}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <p className="mt-1.5 text-xs text-ink-500">

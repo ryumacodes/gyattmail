@@ -272,7 +272,7 @@ export function Mail({
     const finalBody = prefilledBody || quotedBody
 
     setComposeReplyTo({
-      to: selectedMail.email,
+      from: selectedMail.email,
       subject: replySubject,
       body: finalBody,
       messageId: selectedMail.id,
@@ -296,7 +296,7 @@ export function Mail({
     const quotedBody = `\n\n> ${selectedMail.text.split("\n").join("\n> ")}`
 
     setComposeReplyTo({
-      to: allRecipients,
+      from: allRecipients,
       subject: replySubject,
       body: quotedBody,
       messageId: selectedMail.id,
@@ -312,7 +312,7 @@ export function Mail({
     const forwardedBody = `\n\n---------- Forwarded message ---------\nFrom: ${selectedMail.name} <${selectedMail.email}>\nDate: ${selectedMail.date}\nSubject: ${selectedMail.subject}\n\n${selectedMail.text}`
 
     setComposeReplyTo({
-      to: "",
+      from: "",
       subject: forwardSubject,
       body: forwardedBody,
       messageId: selectedMail.id,
