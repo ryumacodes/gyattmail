@@ -13,19 +13,23 @@ const STORAGE_DIR = path.join(process.cwd(), '.data')
 const ACCOUNTS_FILE = path.join(STORAGE_DIR, 'accounts.json')
 
 /**
- * Ensure storage directory and file exist
+ * Ensure storage directory and file exist with secure permissions
  */
 async function ensureStorageExists(): Promise<void> {
   try {
     await fs.access(STORAGE_DIR)
   } catch {
     await fs.mkdir(STORAGE_DIR, { recursive: true })
+    // Set directory permissions to 0700 (owner only)
+    await fs.chmod(STORAGE_DIR, 0o700)
   }
 
   try {
     await fs.access(ACCOUNTS_FILE)
   } catch {
     await fs.writeFile(ACCOUNTS_FILE, JSON.stringify([]), 'utf-8')
+    // Set file permissions to 0600 (owner read/write only)
+    await fs.chmod(ACCOUNTS_FILE, 0o600)
   }
 }
 
@@ -85,6 +89,8 @@ export async function saveAccount(account: EmailAccount): Promise<EmailAccount> 
   }
 
   await fs.writeFile(ACCOUNTS_FILE, JSON.stringify(accounts, null, 2), 'utf-8')
+  // Ensure file permissions remain secure after write
+  await fs.chmod(ACCOUNTS_FILE, 0o600)
 
   return account
 }
@@ -106,6 +112,8 @@ export async function deleteAccount(accountId: string): Promise<boolean> {
   }
 
   await fs.writeFile(ACCOUNTS_FILE, JSON.stringify(filtered, null, 2), 'utf-8')
+  // Ensure file permissions remain secure after write
+  await fs.chmod(ACCOUNTS_FILE, 0o600)
 
   return true
 }

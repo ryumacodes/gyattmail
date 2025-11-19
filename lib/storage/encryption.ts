@@ -6,7 +6,7 @@
 import crypto from 'crypto'
 
 const ALGORITHM = 'aes-256-gcm'
-const IV_LENGTH = 16
+const IV_LENGTH = 12 // 96 bits - NIST recommendation for GCM
 const AUTH_TAG_LENGTH = 16
 const KEY_LENGTH = 32
 
@@ -20,7 +20,7 @@ function getEncryptionKey(): Buffer {
   if (!keyHex) {
     throw new Error(
       'ENCRYPTION_KEY environment variable is not set. ' +
-      'Generate one with: node -e "console.log(crypto.randomBytes(32).toString(\'hex\'))"'
+      'Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
     )
   }
 
@@ -28,6 +28,22 @@ function getEncryptionKey(): Buffer {
 
   if (key.length !== KEY_LENGTH) {
     throw new Error(`ENCRYPTION_KEY must be ${KEY_LENGTH} bytes (64 hex characters)`)
+  }
+
+  // Warn if using a weak or example key
+  const weakKeys = [
+    '00000000000000000000000000000000',
+    '11111111111111111111111111111111',
+    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    'your_32_byte_hex_key_here',
+  ]
+
+  const keyLower = keyHex.toLowerCase()
+  if (weakKeys.some(weak => keyLower.includes(weak))) {
+    console.warn(
+      '⚠️  WARNING: Using a weak or example ENCRYPTION_KEY. ' +
+      'Generate a secure key with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
+    )
   }
 
   return key

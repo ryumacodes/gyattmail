@@ -1,13 +1,26 @@
 import { redirect } from 'next/navigation'
-import { accounts } from '@/app/mail/data'
+import { getAllAccounts } from '@/lib/storage/account-storage'
 
-export default function Home() {
-  // Check if user has any connected accounts
-  // TODO: Replace with real account check from backend/database
-  if (accounts.length === 0) {
+export default async function Home() {
+  // Check if user has any connected accounts with error handling
+  try {
+    const accounts = await getAllAccounts()
+
+    if (accounts.length === 0) {
+      redirect('/connect')
+    } else {
+      redirect('/mail')
+    }
+  } catch (error) {
+    // Re-throw NEXT_REDIRECT errors (they're not actual errors)
+    if (error && typeof error === 'object' && 'digest' in error &&
+        typeof error.digest === 'string' && error.digest.startsWith('NEXT_REDIRECT')) {
+      throw error
+    }
+
+    console.error('Failed to load accounts:', error)
+    // Redirect to connect page on actual errors
     redirect('/connect')
-  } else {
-    redirect('/mail')
   }
 
   return null

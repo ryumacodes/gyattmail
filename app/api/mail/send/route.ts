@@ -8,6 +8,10 @@ import { getAccount } from '@/lib/storage/account-storage'
 import { sendEmail, validateEmails } from '@/lib/email/smtp-client'
 import type { SendEmailRequest, SendEmailResponse } from '@/lib/types/email'
 
+// Force Node.js runtime for nodemailer and other Node APIs
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: NextRequest) {
   try {
     // Parse request body

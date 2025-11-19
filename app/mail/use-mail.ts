@@ -11,6 +11,7 @@ type Config = {
   lastSelectedIndex: number | null
   theme: "auto" | "light" | "dark"
   blockRemoteImages: boolean
+  focusMode: boolean
 }
 
 const configAtom = atom<Config>({
@@ -21,7 +22,8 @@ const configAtom = atom<Config>({
   selectedIds: new Set<string>(), // Multi-select state
   lastSelectedIndex: null, // For shift-click range selection
   theme: "auto", // Default to system preference
-  blockRemoteImages: true, // Block remote images by default for privacy
+  blockRemoteImages: false, // Show images by default for better UX
+  focusMode: false, // Don't hide mail list by default (desktop only)
 })
 
 export function useMail() {

@@ -46,6 +46,7 @@ const shortcuts = [
   {
     category: "View",
     items: [
+      { keys: ["v"], description: "Toggle focus mode" },
       { keys: ["Ctrl", "/"], description: "Toggle shortcuts" },
     ],
   },

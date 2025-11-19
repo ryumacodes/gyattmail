@@ -11,7 +11,7 @@ import { getEssentialFolders } from '@/lib/email/folder-helpers'
 
 // Track last sync time to prevent too-frequent syncs
 let lastSyncTime: number = 0
-const MIN_SYNC_INTERVAL = 60000 // 1 minute minimum between syncs
+const MIN_SYNC_INTERVAL = 300000 // 5 minutes minimum between syncs
 
 export async function POST() {
   try {

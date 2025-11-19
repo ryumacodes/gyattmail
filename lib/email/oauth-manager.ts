@@ -18,28 +18,30 @@ const googleOAuth2Client = new google.auth.OAuth2(
 )
 
 /**
- * Generate Gmail OAuth2 authorization URL
- * User will be redirected to this URL to grant permissions
- */
-export function getGmailAuthUrl(): string {
-  return googleOAuth2Client.generateAuthUrl({
-    access_type: 'offline', // Request refresh token
-    scope: [
-      'https://mail.google.com/', // Full Gmail access for IMAP/SMTP
-      'https://www.googleapis.com/auth/userinfo.email', // Get user email
-    ],
-    prompt: 'consent', // Force consent screen to get refresh token every time
-  })
-}
-
-/**
  * Exchange authorization code for access and refresh tokens
  *
  * @param code - Authorization code from OAuth callback
+ * @param clientId - Optional client ID (uses env var if not provided)
+ * @param clientSecret - Optional client secret (uses env var if not provided)
+ * @param redirectUri - Redirect URI (must match what was used in auth URL)
  * @returns OAuth2 tokens including access_token and refresh_token
  */
-export async function getGmailTokensFromCode(code: string): Promise<OAuth2Tokens> {
-  const { tokens } = await googleOAuth2Client.getToken(code)
+export async function getGmailTokensFromCode(
+  code: string,
+  clientId?: string,
+  clientSecret?: string,
+  redirectUri?: string
+): Promise<OAuth2Tokens> {
+  // Use provided credentials or fall back to environment variables
+  const finalRedirectUri = redirectUri || process.env.GOOGLE_REDIRECT_URI || `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/gmail/callback`
+
+  const oauth2Client = new google.auth.OAuth2(
+    clientId || process.env.GOOGLE_CLIENT_ID,
+    clientSecret || process.env.GOOGLE_CLIENT_SECRET,
+    finalRedirectUri
+  )
+
+  const { tokens } = await oauth2Client.getToken(code)
 
   if (!tokens.access_token || !tokens.refresh_token) {
     throw new Error('Failed to obtain access or refresh token')
@@ -75,12 +77,25 @@ export async function getGmailUserEmail(accessToken: string): Promise<string> {
  * Refresh Google access token using refresh token
  *
  * @param refreshToken - Google OAuth2 refresh token
+ * @param clientId - Optional client ID (uses env var if not provided)
+ * @param clientSecret - Optional client secret (uses env var if not provided)
  * @returns New access token
  */
-export async function refreshGmailAccessToken(refreshToken: string): Promise<string> {
-  googleOAuth2Client.setCredentials({ refresh_token: refreshToken })
+export async function refreshGmailAccessToken(
+  refreshToken: string,
+  clientId?: string,
+  clientSecret?: string
+): Promise<string> {
+  // Use provided credentials or fall back to environment variables
+  const oauth2Client = new google.auth.OAuth2(
+    clientId || process.env.GOOGLE_CLIENT_ID,
+    clientSecret || process.env.GOOGLE_CLIENT_SECRET,
+    process.env.GOOGLE_REDIRECT_URI
+  )
 
-  const { credentials } = await googleOAuth2Client.refreshAccessToken()
+  oauth2Client.setCredentials({ refresh_token: refreshToken })
+
+  const { credentials } = await oauth2Client.refreshAccessToken()
 
   if (!credentials.access_token) {
     throw new Error('Failed to refresh access token')
@@ -93,45 +108,34 @@ export async function refreshGmailAccessToken(refreshToken: string): Promise<str
 // Outlook OAuth2 (Microsoft)
 // ============================================================================
 
-function getMSALClient(): ConfidentialClientApplication {
+function getMSALClient(clientId?: string, clientSecret?: string): ConfidentialClientApplication {
   return new ConfidentialClientApplication({
     auth: {
-      clientId: process.env.MICROSOFT_CLIENT_ID!,
-      clientSecret: process.env.MICROSOFT_CLIENT_SECRET!,
+      clientId: clientId || process.env.MICROSOFT_CLIENT_ID!,
+      clientSecret: clientSecret || process.env.MICROSOFT_CLIENT_SECRET!,
       authority: 'https://login.microsoftonline.com/common',
     },
   })
 }
 
 /**
- * Generate Outlook OAuth2 authorization URL
- * User will be redirected to this URL to grant permissions
- */
-export async function getOutlookAuthUrl(): Promise<string> {
-  const msalClient = getMSALClient()
-
-  const authCodeUrlParameters = {
-    scopes: [
-      'https://outlook.office.com/IMAP.AccessAsUser.All', // IMAP access
-      'https://outlook.office.com/SMTP.Send', // SMTP access
-      'https://outlook.office.com/User.Read', // Get user info
-      'offline_access', // Request refresh token
-    ],
-    redirectUri: process.env.MICROSOFT_REDIRECT_URI!,
-    prompt: 'consent', // Force consent to get refresh token
-  }
-
-  return await msalClient.getAuthCodeUrl(authCodeUrlParameters)
-}
-
-/**
  * Exchange authorization code for access and refresh tokens
  *
  * @param code - Authorization code from OAuth callback
+ * @param clientId - Optional client ID (uses env var if not provided)
+ * @param clientSecret - Optional client secret (uses env var if not provided)
+ * @param redirectUri - Redirect URI (must match what was used in auth URL)
  * @returns OAuth2 tokens including access_token and refresh_token
  */
-export async function getOutlookTokensFromCode(code: string): Promise<OAuth2Tokens> {
-  const msalClient = getMSALClient()
+export async function getOutlookTokensFromCode(
+  code: string,
+  clientId?: string,
+  clientSecret?: string,
+  redirectUri?: string
+): Promise<OAuth2Tokens> {
+  const msalClient = getMSALClient(clientId, clientSecret)
+
+  const finalRedirectUri = redirectUri || process.env.MICROSOFT_REDIRECT_URI || `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/outlook/callback`
 
   const tokenRequest = {
     code,
@@ -141,7 +145,7 @@ export async function getOutlookTokensFromCode(code: string): Promise<OAuth2Toke
       'https://outlook.office.com/User.Read',
       'offline_access',
     ],
-    redirectUri: process.env.MICROSOFT_REDIRECT_URI!,
+    redirectUri: finalRedirectUri,
   }
 
   const response = await msalClient.acquireTokenByCode(tokenRequest)
@@ -200,10 +204,16 @@ export async function getOutlookUserEmail(accessToken: string): Promise<string> 
  * Refresh Microsoft access token using refresh token
  *
  * @param refreshToken - Microsoft OAuth2 refresh token
+ * @param clientId - Optional client ID (uses env var if not provided)
+ * @param clientSecret - Optional client secret (uses env var if not provided)
  * @returns New access token
  */
-export async function refreshOutlookAccessToken(refreshToken: string): Promise<string> {
-  const msalClient = getMSALClient()
+export async function refreshOutlookAccessToken(
+  refreshToken: string,
+  clientId?: string,
+  clientSecret?: string
+): Promise<string> {
+  const msalClient = getMSALClient(clientId, clientSecret)
 
   const tokenRequest = {
     refreshToken,

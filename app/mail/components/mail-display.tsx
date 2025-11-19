@@ -38,10 +38,15 @@ import { useMail } from "@/app/mail/use-mail"
 import { useMailActions } from "@/app/mail/use-mail-actions"
 import { useTrustedSenders } from "@/app/mail/use-trusted-senders"
 import { RemoteImagesBlockedBanner } from "@/app/mail/components/remote-images-blocked-banner"
+import { AISummaryCard } from "@/app/mail/components/ai/ai-summary-card"
+import { AISmartReplies } from "@/app/mail/components/ai/ai-smart-replies"
+import { useAIConfig } from "@/app/mail/use-ai-config"
+import type { AnalyzeEmailResponse } from "@/lib/ai/types"
 import { QuotedTextCollapse } from "@/app/mail/components/quoted-text-collapse"
 import { CalendarEventPreview } from "@/app/mail/components/calendar-event-preview"
 import { LabelBadges } from "@/app/mail/components/label-badges"
 import { FollowUpReminder } from "@/app/mail/components/follow-up-reminder"
+import { AddLabelDialog } from "@/app/mail/components/add-label-dialog"
 import { blockRemoteImages, unblockImages, hasRemoteImages } from "@/app/mail/utils/image-blocker"
 import { parseEmail } from "@/app/mail/utils/email-parser"
 import { parseFirstEvent } from "@/app/mail/utils/ics-parser"
@@ -49,12 +54,15 @@ import type { CalendarEvent } from "@/app/mail/utils/ics-parser"
 
 interface MailDisplayProps {
   mail: Mail | undefined
+  onReply?: (mail: Mail, prefilledBody?: string) => void
+  onReplyAll?: (mail: Mail) => void
+  onForward?: (mail: Mail) => void
 }
 
-export function MailDisplay({ mail: mailProp }: MailDisplayProps) {
+export function MailDisplay({ mail: mailProp, onReply, onReplyAll, onForward }: MailDisplayProps) {
   const today = new Date()
   const [mail, setMail] = useMail()
-  const { toggleStar, addLabel, removeLabel, markAsUnread, snoozeMail } = useMailActions()
+  const { toggleStar, addLabel, removeLabel, markAsUnread, snoozeMail, archiveMail, deleteMail } = useMailActions()
   const { isTrusted, trustDomain } = useTrustedSenders()
   const [isStarAnimating, setIsStarAnimating] = React.useState(false)
   const [displayedHtml, setDisplayedHtml] = React.useState<string>("")
@@ -66,6 +74,11 @@ export function MailDisplay({ mail: mailProp }: MailDisplayProps) {
     quotedSections: Array<{ content: string; type: "reply" | "forward" | "quote" }>
   } | null>(null)
   const [calendarEvents, setCalendarEvents] = React.useState<CalendarEvent[]>([])
+  const [showSnoozeMenu, setShowSnoozeMenu] = React.useState(false)
+  const [showLabelDialog, setShowLabelDialog] = React.useState(false)
+  const { isConfigured } = useAIConfig()
+  const [aiAnalysis, setAiAnalysis] = React.useState<AnalyzeEmailResponse | null>(null)
+  const [aiLoading, setAiLoading] = React.useState(false)
 
   const handleBack = () => {
     setMail({ ...mail, selected: null })
@@ -82,6 +95,84 @@ export function MailDisplay({ mail: mailProp }: MailDisplayProps) {
       setIsStarAnimating(false)
     }, 400) // Match animation duration
   }
+
+  const handleArchive = () => {
+    if (!mailProp) return
+    archiveMail(mailProp.id)
+    setMail({ ...mail, selected: null })
+  }
+
+  const handleMoveToJunk = () => {
+    if (!mailProp) return
+    addLabel(mailProp.id, "Junk")
+    archiveMail(mailProp.id)
+    setMail({ ...mail, selected: null })
+  }
+
+  const handleTrash = () => {
+    if (!mailProp) return
+    deleteMail(mailProp.id)
+    setMail({ ...mail, selected: null })
+  }
+
+  const handleSnooze = (snoozeUntil: Date) => {
+    if (!mailProp) return
+    snoozeMail(mailProp.id, snoozeUntil)
+    setMail({ ...mail, selected: null })
+  }
+
+  const handleReply = () => {
+    if (!mailProp || !onReply) return
+    onReply(mailProp)
+  }
+
+  const handleReplyAll = () => {
+    if (!mailProp || !onReplyAll) return
+    onReplyAll(mailProp)
+  }
+
+  const handleForward = () => {
+    if (!mailProp || !onForward) return
+    onForward(mailProp)
+  }
+
+  const fetchAIAnalysis = React.useCallback(async () => {
+    if (!mailProp || !isConfigured) return
+
+    setAiLoading(true)
+    setAiAnalysis(null)
+
+    try {
+      const response = await fetch('/api/ai/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: mailProp.email,
+          subject: mailProp.subject,
+          body: mailProp.text || '',
+          analyzePriority: true,
+          analyzeSentiment: true,
+          extractActions: true,
+          classifyCategory: false,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        // Extract analysis data (API returns { success: true, ...AnalyzeEmailResponse })
+        const { success, ...analysis } = data
+        setAiAnalysis(analysis)
+      } else {
+        setAiAnalysis(null)
+      }
+    } catch (error) {
+      console.error('AI analysis error:', error)
+      setAiAnalysis(null)
+    } finally {
+      setAiLoading(false)
+    }
+  }, [mailProp, isConfigured])
 
   // Process email content for image blocking, quote detection, and ICS parsing
   React.useEffect(() => {
@@ -105,16 +196,21 @@ export function MailDisplay({ mail: mailProp }: MailDisplayProps) {
       type: section.type,
     }))
 
+    // Use HTML content if available, otherwise fall back to text
+    const contentToUse = mailProp.html || mailProp.text
+    const isHtmlContent = !!mailProp.html
+
     // Get main content (content before first quoted section or full text if no quotes)
-    let mainContent = mailProp.text
-    if (parsed.quotedSections.length > 0) {
+    let mainContent = contentToUse
+    if (!isHtmlContent && parsed.quotedSections.length > 0) {
+      // Only parse quotes for plain text emails
       const firstQuoteIndex = parsed.quotedSections[0].startIndex
       mainContent = lines.slice(0, firstQuoteIndex).join("\n").trim()
     }
 
     setParsedEmail({
-      mainContent,
-      quotedSections,
+      mainContent: isHtmlContent ? contentToUse : mainContent,
+      quotedSections: isHtmlContent ? [] : quotedSections, // Don't show quotes UI for HTML emails
     })
 
     // Parse ICS attachments for calendar events
@@ -137,7 +233,7 @@ export function MailDisplay({ mail: mailProp }: MailDisplayProps) {
     // Check if blocking is enabled and sender is not trusted
     const shouldBlock = mail.blockRemoteImages && !isTrusted(mailProp.email)
 
-    if (shouldBlock && hasRemoteImages(mainContent)) {
+    if (isHtmlContent && shouldBlock && hasRemoteImages(mainContent)) {
       const result = blockRemoteImages(mainContent)
       setDisplayedHtml(result.blockedHtml)
       setImagesBlocked(true)
@@ -151,6 +247,15 @@ export function MailDisplay({ mail: mailProp }: MailDisplayProps) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mailProp, mail.blockRemoteImages])
+
+  // Fetch AI analysis when mail changes
+  React.useEffect(() => {
+    if (mailProp && isConfigured) {
+      fetchAIAnalysis()
+    } else {
+      setAiAnalysis(null)
+    }
+  }, [mailProp, isConfigured, fetchAIAnalysis])
 
   const handleShowImages = () => {
     if (!mailProp || !imagesBlocked) return
@@ -185,7 +290,7 @@ export function MailDisplay({ mail: mailProp }: MailDisplayProps) {
           <Separator orientation="vertical" className="mx-1 h-6" />
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" disabled={!mailProp}>
+              <Button variant="ghost" size="icon" disabled={!mailProp} onClick={handleArchive}>
                 <Archive className="h-4 w-4" />
                 <span className="sr-only">Archive</span>
               </Button>
@@ -194,7 +299,7 @@ export function MailDisplay({ mail: mailProp }: MailDisplayProps) {
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" disabled={!mailProp}>
+              <Button variant="ghost" size="icon" disabled={!mailProp} onClick={handleMoveToJunk}>
                 <ArchiveX className="h-4 w-4" />
                 <span className="sr-only">Move to junk</span>
               </Button>
@@ -203,7 +308,7 @@ export function MailDisplay({ mail: mailProp }: MailDisplayProps) {
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" disabled={!mailProp}>
+              <Button variant="ghost" size="icon" disabled={!mailProp} onClick={handleTrash}>
                 <Trash2 className="h-4 w-4" />
                 <span className="sr-only">Move to trash</span>
               </Button>
@@ -211,15 +316,35 @@ export function MailDisplay({ mail: mailProp }: MailDisplayProps) {
             <TooltipContent>Move to trash</TooltipContent>
           </Tooltip>
           <Separator orientation="vertical" className="mx-1 h-6" />
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" disabled={!mailProp}>
-                <Clock className="h-4 w-4" />
-                <span className="sr-only">Snooze</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Snooze</TooltipContent>
-          </Tooltip>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" disabled={!mailProp}>
+                    <Clock className="h-4 w-4" />
+                    <span className="sr-only">Snooze</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Snooze</TooltipContent>
+              </Tooltip>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuLabel>Snooze until</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleSnooze(addHours(new Date(), 4))}>
+                Later today ({format(addHours(new Date(), 4), "h:mm a")})
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSnooze(addDays(new Date(), 1))}>
+                Tomorrow ({format(addDays(new Date(), 1), "EEE h:mm a")})
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSnooze(nextSaturday(new Date()))}>
+                This weekend ({format(nextSaturday(new Date()), "EEE h:mm a")})
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSnooze(addDays(new Date(), 7))}>
+                Next week ({format(addDays(new Date(), 7), "EEE h:mm a")})
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Separator orientation="vertical" className="mx-1 h-6" />
           <Tooltip>
             <TooltipTrigger asChild>
@@ -250,7 +375,7 @@ export function MailDisplay({ mail: mailProp }: MailDisplayProps) {
         <div className="ml-auto flex items-center gap-2">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" disabled={!mailProp}>
+              <Button variant="ghost" size="icon" disabled={!mailProp} onClick={handleReply}>
                 <Reply className="h-4 w-4" />
                 <span className="sr-only">Reply</span>
               </Button>
@@ -259,7 +384,7 @@ export function MailDisplay({ mail: mailProp }: MailDisplayProps) {
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" disabled={!mailProp}>
+              <Button variant="ghost" size="icon" disabled={!mailProp} onClick={handleReplyAll}>
                 <ReplyAll className="h-4 w-4" />
                 <span className="sr-only">Reply all</span>
               </Button>
@@ -268,7 +393,7 @@ export function MailDisplay({ mail: mailProp }: MailDisplayProps) {
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" disabled={!mailProp}>
+              <Button variant="ghost" size="icon" disabled={!mailProp} onClick={handleForward}>
                 <Forward className="h-4 w-4" />
                 <span className="sr-only">Forward</span>
               </Button>
@@ -296,13 +421,40 @@ export function MailDisplay({ mail: mailProp }: MailDisplayProps) {
             <DropdownMenuItem onClick={() => mailProp && markAsUnread(mailProp.id)}>
               Mark as unread
             </DropdownMenuItem>
-            <DropdownMenuItem>Star thread</DropdownMenuItem>
-            <DropdownMenuItem>Add label</DropdownMenuItem>
-            <DropdownMenuItem>Mute thread</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => mailProp && toggleStar(mailProp.id)}>
+              {mailProp?.starred ? "Unstar thread" : "Star thread"}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setShowLabelDialog(true)}>
+              Add label
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => {
+              if (!mailProp) return
+              const isMuted = mailProp.labels.includes("Muted")
+              if (isMuted) {
+                removeLabel(mailProp.id, "Muted")
+              } else {
+                addLabel(mailProp.id, "Muted")
+                // Archive the thread to remove from inbox
+                archiveMail(mailProp.id)
+              }
+            }}>
+              {mailProp?.labels.includes("Muted") ? "Unmute thread" : "Mute thread"}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
       <Separator />
+
+      {/* Label Dialog */}
+      {mailProp && (
+        <AddLabelDialog
+          open={showLabelDialog}
+          onOpenChange={setShowLabelDialog}
+          mailId={mailProp.id}
+          onAddLabel={(label) => addLabel(mailProp.id, label)}
+          onRemoveLabel={(label) => removeLabel(mailProp.id, label)}
+        />
+      )}
       {mailProp ? (
         <div className="flex flex-1 flex-col">
           <div className="flex items-start p-4">
@@ -374,6 +526,21 @@ export function MailDisplay({ mail: mailProp }: MailDisplayProps) {
             </div>
           )}
 
+          {/* AI Summary */}
+          {isConfigured && aiAnalysis && (
+            <div className="px-4 pt-4">
+              <AISummaryCard
+                summary={`Email from ${mailProp.name || mailProp.email}${aiAnalysis.category ? ` - ${aiAnalysis.category}` : ''}`}
+                priority={aiAnalysis.priority}
+                priorityConfidence={aiAnalysis.priorityConfidence}
+                sentiment={aiAnalysis.sentiment}
+                sentimentConfidence={aiAnalysis.sentimentConfidence}
+                actionItems={aiAnalysis.actionItems}
+                onDismiss={() => setAiAnalysis(null)}
+              />
+            </div>
+          )}
+
           <div className="flex-1 p-4">
             <div
               className="whitespace-pre-wrap text-foreground leading-relaxed"
@@ -388,6 +555,16 @@ export function MailDisplay({ mail: mailProp }: MailDisplayProps) {
           </div>
           <Separator className="mt-auto" />
           <div className="p-4">
+            {/* AI Smart Replies */}
+            {isConfigured && (
+              <AISmartReplies
+                mail={mailProp}
+                onSelectReply={(text) => {
+                  if (!onReply) return
+                  onReply(mailProp, text)
+                }}
+              />
+            )}
             <form>
               <div className="grid gap-4">
                 <Textarea

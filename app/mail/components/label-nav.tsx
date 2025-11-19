@@ -17,14 +17,16 @@ interface LabelNavProps {
   isCollapsed: boolean
   mails: Mail[]
   className?: string
+  onLabelClick?: (label: string) => void
 }
 
 interface DroppableLabelItemProps {
   label: string
   count: number
+  onLabelClick: (label: string) => void
 }
 
-function DroppableLabelItem({ label, count }: DroppableLabelItemProps) {
+function DroppableLabelItem({ label, count, onLabelClick }: DroppableLabelItemProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: label,
   })
@@ -32,6 +34,7 @@ function DroppableLabelItem({ label, count }: DroppableLabelItemProps) {
   return (
     <button
       ref={setNodeRef}
+      onClick={() => onLabelClick(label)}
       className={cn(
         buttonVariants({ variant: "ghost", size: "sm" }),
         "justify-start group/label transition-all",
@@ -47,9 +50,15 @@ function DroppableLabelItem({ label, count }: DroppableLabelItemProps) {
   )
 }
 
-export function LabelNav({ isCollapsed, mails, className }: LabelNavProps) {
+export function LabelNav({ isCollapsed, mails, className, onLabelClick }: LabelNavProps) {
   const [isExpanded, setIsExpanded] = React.useState(true)
   const labelsWithCounts = getAllLabelsWithCounts(mails)
+
+  const handleLabelClick = (label: string) => {
+    if (onLabelClick) {
+      onLabelClick(label)
+    }
+  }
 
   if (isCollapsed) {
     return (
@@ -112,7 +121,7 @@ export function LabelNav({ isCollapsed, mails, className }: LabelNavProps) {
             </div>
           ) : (
             labelsWithCounts.map(({ label, count }) => (
-              <DroppableLabelItem key={label} label={label} count={count} />
+              <DroppableLabelItem key={label} label={label} count={count} onLabelClick={handleLabelClick} />
             ))
           )}
         </nav>

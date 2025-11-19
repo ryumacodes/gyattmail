@@ -4,18 +4,46 @@ import { toast } from "sonner"
 export function useMailActions() {
   const [mails, setMails] = useMailData()
 
-  const markAsRead = (mailId: string) => {
+  const markAsRead = async (mailId: string) => {
     const previousMail = mails.find(m => m.id === mailId)
     if (!previousMail) return
 
+    // Optimistic UI update
     setMails(mails.map(mail =>
       mail.id === mailId ? { ...mail, read: true } : mail
     ))
 
-    const undo = () => {
+    // Persist to backend
+    try {
+      const response = await fetch('/api/mail/flags', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emailId: mailId, read: true }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update read status')
+      }
+    } catch (error) {
+      console.error('Failed to persist read status:', error)
+      // Revert on error
       setMails(mails.map(mail =>
         mail.id === mailId ? { ...mail, read: previousMail.read } : mail
       ))
+      toast.error("Failed to mark as read")
+      return
+    }
+
+    const undo = async () => {
+      setMails(mails.map(mail =>
+        mail.id === mailId ? { ...mail, read: previousMail.read } : mail
+      ))
+      // Persist undo
+      await fetch('/api/mail/flags', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emailId: mailId, read: previousMail.read }),
+      })
     }
 
     toast.success("Marked as read", {
@@ -27,18 +55,46 @@ export function useMailActions() {
     })
   }
 
-  const markAsUnread = (mailId: string) => {
+  const markAsUnread = async (mailId: string) => {
     const previousMail = mails.find(m => m.id === mailId)
     if (!previousMail) return
 
+    // Optimistic UI update
     setMails(mails.map(mail =>
       mail.id === mailId ? { ...mail, read: false } : mail
     ))
 
-    const undo = () => {
+    // Persist to backend
+    try {
+      const response = await fetch('/api/mail/flags', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emailId: mailId, read: false }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update read status')
+      }
+    } catch (error) {
+      console.error('Failed to persist read status:', error)
+      // Revert on error
       setMails(mails.map(mail =>
         mail.id === mailId ? { ...mail, read: previousMail.read } : mail
       ))
+      toast.error("Failed to mark as unread")
+      return
+    }
+
+    const undo = async () => {
+      setMails(mails.map(mail =>
+        mail.id === mailId ? { ...mail, read: previousMail.read } : mail
+      ))
+      // Persist undo
+      await fetch('/api/mail/flags', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emailId: mailId, read: previousMail.read }),
+      })
     }
 
     toast.success("Marked as unread", {
@@ -163,20 +219,48 @@ export function useMailActions() {
     })
   }
 
-  const toggleStar = (mailId: string) => {
+  const toggleStar = async (mailId: string) => {
     const previousMail = mails.find(m => m.id === mailId)
     if (!previousMail) return
 
     const newStarred = !previousMail.starred
 
+    // Optimistic UI update
     setMails(mails.map(mail =>
       mail.id === mailId ? { ...mail, starred: newStarred } : mail
     ))
 
-    const undo = () => {
+    // Persist to backend
+    try {
+      const response = await fetch('/api/mail/flags', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emailId: mailId, starred: newStarred }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update starred status')
+      }
+    } catch (error) {
+      console.error('Failed to persist starred status:', error)
+      // Revert on error
       setMails(mails.map(mail =>
         mail.id === mailId ? { ...mail, starred: previousMail.starred } : mail
       ))
+      toast.error("Failed to update starred status")
+      return
+    }
+
+    const undo = async () => {
+      setMails(mails.map(mail =>
+        mail.id === mailId ? { ...mail, starred: previousMail.starred } : mail
+      ))
+      // Persist undo
+      await fetch('/api/mail/flags', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emailId: mailId, starred: previousMail.starred }),
+      })
     }
 
     toast.success(newStarred ? "Starred" : "Unstarred", {
