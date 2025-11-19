@@ -36,7 +36,7 @@ export function AISettingsPanel() {
     config?.provider || 'gemini'
   )
   const [selectedModel, setSelectedModel] = React.useState(
-    config?.model || 'gemini-2.0-flash-exp'
+    config?.model || 'gemini-2.5-flash-preview-05-20'
   )
   const [apiKey, setApiKeyState] = React.useState(config?.apiKey || '')
   const [showApiKey, setShowApiKey] = React.useState(false)
@@ -204,7 +204,7 @@ export function AISettingsPanel() {
           </Button>
         </div>
         <p className="mt-1.5 text-xs text-ink-500">
-          Your API key is stored locally and encrypted
+          Your API key is stored locally in this browser
         </p>
       </div>
 
@@ -227,10 +227,11 @@ export function AISettingsPanel() {
 
       {/* Info */}
       <div className="p-3 bg-blue-50 border border-blue-300 rounded text-xs text-blue-700 space-y-1">
-        <p className="font-semibold">Cost Estimates:</p>
+        <p className="font-semibold">Cost Estimates (Nov 2025):</p>
         <ul className="space-y-0.5 ml-4 list-disc">
-          <li>Gemini Flash: Free tier (15 RPM, 1.5M tokens/day)</li>
-          <li>OpenAI GPT-4o-mini: ~$0.375 per million tokens</li>
+          <li>Gemini 2.5 Flash: Free tier (15 RPM, 1M tokens/day) or ~$1.40 per million tokens</li>
+          <li>GPT-5 Mini: ~$1.125 per million tokens</li>
+          <li>Claude 3.5 Haiku: ~$2.40 per million tokens</li>
           <li>OpenRouter: Many free models available</li>
         </ul>
       </div>

@@ -5,8 +5,8 @@
 export type AIProvider = 'gemini' | 'openai' | 'claude' | 'openrouter'
 
 export type AIModel = {
-  gemini: 'gemini-2.0-flash-exp' | 'gemini-1.5-pro' | 'gemini-1.5-flash'
-  openai: 'gpt-4o' | 'gpt-4o-mini' | 'gpt-3.5-turbo'
+  gemini: 'gemini-2.5-flash-preview-05-20' | 'gemini-1.5-pro' | 'gemini-1.5-flash'
+  openai: 'gpt-5-mini' | 'gpt-4o' | 'gpt-4o-mini'
   claude: 'claude-3-5-sonnet-20241022' | 'claude-3-5-haiku-20241022' | 'claude-3-opus-20240229'
 }
 

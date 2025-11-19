@@ -438,10 +438,11 @@ Only return valid JSON, no other text.`
   estimateCost(operation: string, inputLength: number): CostEstimate {
     const tokens = this.estimateTokens(operation + ' ' + inputLength.toString())
 
-    // Gemini 2.0 Flash pricing (as of Dec 2024)
-    // Free tier: 15 RPM, 1.5M tokens/day
-    // Paid tier: $0.30 per million tokens (input + output combined)
-    const costPerMillionTokens = 0.30
+    // Gemini 2.5 Flash pricing - November 2025 (verify at ai.google.dev/pricing)
+    // Free tier: 15 RPM, 1M tokens/day
+    // Paid tier: $0.30 input / $2.50 output per million tokens
+    // Average: ~$1.40 per million tokens
+    const costPerMillionTokens = 1.40
     const estimatedCost = (tokens / 1000000) * costPerMillionTokens
 
     return {
@@ -454,8 +455,8 @@ Only return valid JSON, no other text.`
   }
 
   protected calculateCost(tokensUsed: number): number {
-    // Gemini 2.0 Flash: $0.30 per million tokens
-    return (tokensUsed / 1000000) * 0.30
+    // Gemini 2.5 Flash - November 2025: ~$1.40 per million tokens (average)
+    return (tokensUsed / 1000000) * 1.40
   }
 
   // Helper methods for building prompts

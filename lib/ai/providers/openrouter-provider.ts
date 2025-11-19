@@ -122,7 +122,7 @@ export class OpenRouterProvider extends OpenAIProvider {
 
 /**
  * Popular OpenRouter models
- * Updated as of December 2024
+ * Verify current models and pricing at openrouter.ai/models
  */
 export const OPENROUTER_MODELS = {
   // Free models

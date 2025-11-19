@@ -329,10 +329,13 @@ ${emailsList}
 
 Return a JSON object with:
 {
-  "overallSummary": "overall thread summary",
-  "keyDecisions": ["decision 1", "decision 2"],
-  "nextSteps": ["step 1", "step 2"],
-  "participants": [{"email": "email@example.com", "role": "their role in thread"}]
+  "threadSummary": "2-3 sentence summary of the entire conversation",
+  "participants": ["email1@example.com", "email2@example.com"],
+  "keyTopics": ["topic1", "topic2"],
+  "actionItems": [
+    {"task": "description", "assignedTo": "email or null", "deadline": "date or null"}
+  ],
+  "sentiment": "positive|neutral|negative|mixed"
 }`
 
     try {
@@ -422,8 +425,8 @@ Available labels: ${availableLabels}
 
 Return a JSON object with:
 {
-  "suggestedLabels": [
-    {"label": "label name", "confidence": 0.0-1.0, "reason": "why this label applies"}
+  "labels": [
+    {"name": "label name", "confidence": 0.0-1.0, "reason": "why this label applies"}
   ]
 }`
 
@@ -454,12 +457,11 @@ Return a JSON object with:
   }
 
   estimateCost(operation: string, inputLength: number): CostEstimate {
-    const estimatedTokens = this.estimateTokens(
-      inputLength.toString().repeat(inputLength)
-    )
+    // Use simple linear approximation to avoid O(n²) string construction
+    const estimatedTokens = Math.max(0, inputLength)
 
-    // Claude pricing (as of 2024)
-    // Haiku: $0.25/$1.25 per MTok (in/out)
+    // Claude pricing - November 2025 (verify at anthropic.com/pricing)
+    // Haiku: $0.80/$4.00 per MTok (in/out)
     // Sonnet: $3/$15 per MTok (in/out)
     // Opus: $15/$75 per MTok (in/out)
     const model = this.config.model.toLowerCase()
@@ -467,8 +469,8 @@ Return a JSON object with:
     let outputRate = 15.0
 
     if (model.includes('haiku')) {
-      inputRate = 0.25
-      outputRate = 1.25
+      inputRate = 0.80
+      outputRate = 4.00
     } else if (model.includes('opus')) {
       inputRate = 15.0
       outputRate = 75.0
@@ -491,7 +493,7 @@ Return a JSON object with:
     let avgRate = 9.0 // Average of input/output for Sonnet
 
     if (model.includes('haiku')) {
-      avgRate = 0.75 // Average of $0.25 and $1.25
+      avgRate = 2.40 // Average of $0.80 and $4.00 (November 2025)
     } else if (model.includes('opus')) {
       avgRate = 45.0 // Average of $15 and $75
     }

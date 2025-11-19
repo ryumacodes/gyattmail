@@ -488,11 +488,11 @@ Gyattmail supports AI-powered features with multiple providers. Configuration is
 1. **Navigate to Settings** (⚙️ icon in sidebar)
 2. **Click on "AI Settings"** tab
 3. **Choose Your Provider**:
-   - **Google Gemini** - Free tier available (15 RPM, 1.5M tokens/day)
-   - **OpenAI GPT** - Pay-as-you-go (~$0.15-0.60 per 1M tokens)
-   - **Anthropic Claude** - Pay-as-you-go (~$0.25-15 per 1M tokens)
+   - **Google Gemini** - Free tier available (15 RPM, 1M tokens/day) or ~$1.40 per 1M tokens
+   - **OpenAI GPT** - Pay-as-you-go (~$1.125-6.25 per 1M tokens)
+   - **Anthropic Claude** - Pay-as-you-go (~$2.40-9 per 1M tokens)
    - **OpenRouter** - Access to 100+ models, many free options
-4. **Select Model** (e.g., `gemini-2.0-flash-exp`, `gpt-4o-mini`, `claude-3-5-haiku`)
+4. **Select Model** (e.g., `gemini-2.5-flash-preview-05-20`, `gpt-5-mini`, `claude-3-5-haiku`)
 5. **Enter API Key** and click "Save AI Settings"
 
 #### Getting API Keys
@@ -500,7 +500,7 @@ Gyattmail supports AI-powered features with multiple providers. Configuration is
 **Gemini (Google AI)**
 - Visit: https://aistudio.google.com/app/apikey
 - Click "Create API key" → Select or create project → Copy key
-- Free tier: 15 requests/minute, 1.5M tokens/day
+- Free tier: 15 requests/minute, 1M tokens/day
 
 **OpenAI**
 - Visit: https://platform.openai.com/api-keys

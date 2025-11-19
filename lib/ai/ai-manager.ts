@@ -182,9 +182,9 @@ export function getAvailableProviders(): AIProvider[] {
 export function getAvailableModels(provider: AIProvider): string[] {
   switch (provider) {
     case 'gemini':
-      return ['gemini-2.0-flash-exp', 'gemini-1.5-pro', 'gemini-1.5-flash']
+      return ['gemini-2.5-flash-preview-05-20', 'gemini-1.5-pro', 'gemini-1.5-flash']
     case 'openai':
-      return ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo']
+      return ['gpt-5-mini', 'gpt-4o', 'gpt-4o-mini']
     case 'openrouter':
       return [
         'meta-llama/llama-3.2-3b-instruct:free',
@@ -211,9 +211,9 @@ export function getAvailableModels(provider: AIProvider): string[] {
 export function getDefaultModel(provider: AIProvider): string {
   switch (provider) {
     case 'gemini':
-      return 'gemini-2.0-flash-exp'
+      return 'gemini-2.5-flash-preview-05-20'
     case 'openai':
-      return 'gpt-4o-mini'
+      return 'gpt-5-mini'
     case 'openrouter':
       return 'meta-llama/llama-3.2-3b-instruct:free'
     case 'claude':
@@ -254,14 +254,14 @@ export function getProviderDisplayName(provider: AIProvider): string {
  */
 export function getModelDisplayName(model: string): string {
   // Gemini models
-  if (model === 'gemini-2.0-flash-exp') return 'Gemini 2.0 Flash (Experimental)'
+  if (model === 'gemini-2.5-flash-preview-05-20') return 'Gemini 2.5 Flash'
   if (model === 'gemini-1.5-pro') return 'Gemini 1.5 Pro'
   if (model === 'gemini-1.5-flash') return 'Gemini 1.5 Flash'
 
   // OpenAI models
+  if (model === 'gpt-5-mini') return 'GPT-5 Mini'
   if (model === 'gpt-4o') return 'GPT-4o'
   if (model === 'gpt-4o-mini') return 'GPT-4o Mini'
-  if (model === 'gpt-3.5-turbo') return 'GPT-3.5 Turbo'
 
   // Claude models
   if (model === 'claude-3-5-sonnet-20241022') return 'Claude 3.5 Sonnet'

@@ -444,11 +444,20 @@ Only suggest labels from the available list. Order by confidence (highest first)
   estimateCost(operation: string, inputLength: number): CostEstimate {
     const tokens = this.estimateTokens(operation + ' ' + inputLength.toString())
 
-    // GPT-4o-mini pricing (as of Dec 2024)
-    // Input: $0.15 per million tokens
-    // Output: $0.60 per million tokens
-    // Average: ~$0.375 per million tokens
-    const costPerMillionTokens = 0.375
+    // November 2025 pricing (verify at openai.com/api/pricing)
+    let costPerMillionTokens = 0.375
+
+    if (this.config.model.includes('gpt-5-mini') || this.config.model.includes('5-mini')) {
+      // GPT-5 Mini: $0.25 input / $2.00 output per MTok
+      costPerMillionTokens = 1.125 // Average
+    } else if (this.config.model.includes('gpt-4o') && !this.config.model.includes('mini')) {
+      // GPT-4o: $2.50 input / $10.00 output per MTok
+      costPerMillionTokens = 6.25 // Average
+    } else if (this.config.model.includes('4o-mini')) {
+      // GPT-4o-mini: $0.15 input / $0.60 output per MTok
+      costPerMillionTokens = 0.375 // Average
+    }
+
     const estimatedCost = (tokens / 1000000) * costPerMillionTokens
 
     return {
@@ -461,15 +470,20 @@ Only suggest labels from the available list. Order by confidence (highest first)
   }
 
   protected calculateCost(tokensUsed: number): number {
-    // GPT-4o-mini: ~$0.375 per million tokens (average of input/output)
-    if (this.config.model.includes('mini')) {
+    // November 2025 pricing
+    if (this.config.model.includes('gpt-5-mini') || this.config.model.includes('5-mini')) {
+      // GPT-5 Mini: ~$1.125 per million tokens (average)
+      return (tokensUsed / 1000000) * 1.125
+    }
+    if (this.config.model.includes('4o-mini')) {
+      // GPT-4o-mini: ~$0.375 per million tokens (average)
       return (tokensUsed / 1000000) * 0.375
     }
-    // GPT-4o: ~$3.75 per million tokens
     if (this.config.model.includes('4o')) {
-      return (tokensUsed / 1000000) * 3.75
+      // GPT-4o: ~$6.25 per million tokens (average)
+      return (tokensUsed / 1000000) * 6.25
     }
-    // GPT-3.5-turbo: ~$0.75 per million tokens
+    // Default fallback
     return (tokensUsed / 1000000) * 0.75
   }
 
