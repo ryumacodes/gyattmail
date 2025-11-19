@@ -6,7 +6,6 @@
 [![React](https://img.shields.io/badge/React-19.0.0-61DAFB?style=flat&logo=react&logoColor=white)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC?style=flat&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-20+-339933?style=flat&logo=node.js&logoColor=white)](https://nodejs.org/)
 
 [![CodeRabbit Reviews](https://img.shields.io/coderabbit/prs/github/ryumacodes/gyattmail?utm_source=oss&utm_medium=github&utm_campaign=ryumacodes%2Fgyattmail&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)](https://coderabbit.ai)
@@ -22,7 +21,7 @@ Built with <strong>Paper-Hatch</strong> design system – cross-hatched borders,
 </p>
 
 <p align="center">
-🔒 <strong>Your emails, your machine, your rules.</strong>
+Your emails, your machine, your rules.
 </p>
 
 > **Mood:** winter-quiet, engraved, tactile
@@ -30,39 +29,45 @@ Built with <strong>Paper-Hatch</strong> design system – cross-hatched borders,
 > **Primary color:** hat brown (gnome cap) #B7662E
 > **Foundation:** warm paper beige #F4EFE4
 
-## ✨ Features
+## Features
 
 ### Privacy & Control
-- 🔒 **Self-Hosted**: Your emails stay on YOUR machine – no third-party servers, no cloud storage
-- 🌐 **Open Source First**: MIT licensed, auditable code, community-driven development
-- 🔐 **User-Controlled OAuth**: Create your own Google/Microsoft OAuth credentials – full security control
-- 🔑 **AES-256-GCM Encryption**: All stored credentials encrypted locally
+- **Self-Hosted**: Your emails stay on your machine – no third-party servers, no cloud storage
+- **Open Source**: Auditable code, community-driven development
+- **User-Controlled OAuth**: Create your own Google/Microsoft OAuth credentials for full security control
+- **AES-256-GCM Encryption**: All stored credentials encrypted locally
 
 ### Email & Accounts
-- 📧 **True Multi-Provider**: Gmail, Outlook, iCloud, Custom SMTP/IMAP – all in one unified inbox
-- 🔄 **Real-Time Sync**: IMAP/SMTP with automatic background polling (every 15 minutes)
-- 📬 **Multi-Folder Support**: INBOX, Sent, Drafts, Trash, All Mail with incremental sync
-- ⚡ **Multiple Accounts**: Add unlimited accounts per provider
-- 🏷️ **Flag Sync**: Mark read/unread, star/unstar – changes sync to email server
+- **Multi-Provider**: Gmail, Outlook, iCloud, Custom SMTP/IMAP in one unified inbox
+- **Real-Time Sync**: IMAP/SMTP with automatic background polling (every 15 minutes)
+- **Multi-Folder Support**: INBOX, Sent, Drafts, Trash, All Mail with incremental sync
+- **Multiple Accounts**: Add unlimited accounts per provider
+- **Flag Sync**: Mark read/unread, star/unstar with changes synced to email server
 
 ### Organization & Search
-- 📋 **View-Based Organization**: Filter-based saved views with groups and custom properties
-- 🔍 **Server-Side Search**: Fast full-text search with rich query grammar
-- 🏷️ **Labels & Badges**: Artisanal outlined pill-style labels
-- 🎯 **Follow-Up Reminders**: Never forget to respond
+- **View-Based Organization**: Filter-based saved views with groups and custom properties
+- **Server-Side Search**: Fast full-text search with rich query grammar
+- **Labels & Badges**: Outlined pill-style labels
+- **Follow-Up Reminders**: Email snoozing and reminders
 
 ### AI Features (Bring Your Own API Key)
-- 🤖 **AI-Powered**: Bring your own OpenAI or Gemini API key – pay only for what you use
-- 💰 **Cost-Effective**: ~$2-5/month in API costs (vs $20-30/month subscriptions)
-- 🧠 **Smart Features**: Email summaries, auto-labeling, semantic search, smart compose (coming soon)
+- **Multi-Provider AI**: Support for Google Gemini, OpenAI GPT, Anthropic Claude, and OpenRouter
+- **Cost-Effective**: Pay ~$2-5/month in API costs vs $20-30/month subscriptions
+- **Smart Compose**: AI-powered email drafting with context awareness, tone adjustment, and reply generation
+- **Email Analysis**: Automatic priority detection, sentiment analysis, and action item extraction
+- **Quick Replies**: AI-generated smart reply suggestions with confidence scoring
+- **Email Summarization**: Concise summaries of long emails and threads
+- **Auto-Labeling**: Email categorization and label suggestions
+- **Writing Assistance**: Grammar improvement, tone adjustment, and text completion
+- **Privacy-First**: API keys stored locally, encrypted with AES-256-GCM
 
 ### Design & UX
-- 🎨 **Paper-Hatch Design System**: Cross-hatched borders, paper grain, letterpress buttons, hand-drawn elements
-- 🎯 **Resizable Panels**: Three-column layout with persistent sizing and hatched dividers
-- 🎭 **Unique Aesthetic**: Warm, artisanal design that stands out from generic Material Design clones
-- 📱 **Web-First**: Built with Next.js 15, React 19, and Turbopack
+- **Paper-Hatch Design System**: Cross-hatched borders, paper grain, letterpress buttons, hand-drawn elements
+- **Resizable Panels**: Three-column layout with persistent sizing and hatched dividers
+- **Warm Aesthetic**: Artisanal design with paper textures and hatched borders
+- **Web-First**: Built with Next.js 15, React 19, and Turbopack
 
-## 🎨 Paper-Hatch Design System
+## Paper-Hatch Design System
 
 ### Color Tokens
 
@@ -476,6 +481,54 @@ If you published to Production (recommended), you'll see this warning screen whe
 
 ---
 
+### AI Configuration (Optional)
+
+Gyattmail supports AI-powered features with multiple providers. Configuration is done through the UI:
+
+1. **Navigate to Settings** (⚙️ icon in sidebar)
+2. **Click on "AI Settings"** tab
+3. **Choose Your Provider**:
+   - **Google Gemini** - Free tier available (15 RPM, 1.5M tokens/day)
+   - **OpenAI GPT** - Pay-as-you-go (~$0.15-0.60 per 1M tokens)
+   - **Anthropic Claude** - Pay-as-you-go (~$0.25-15 per 1M tokens)
+   - **OpenRouter** - Access to 100+ models, many free options
+4. **Select Model** (e.g., `gemini-2.0-flash-exp`, `gpt-4o-mini`, `claude-3-5-haiku`)
+5. **Enter API Key** and click "Save AI Settings"
+
+#### Getting API Keys
+
+**Gemini (Google AI)**
+- Visit: https://aistudio.google.com/app/apikey
+- Click "Create API key" → Select or create project → Copy key
+- Free tier: 15 requests/minute, 1.5M tokens/day
+
+**OpenAI**
+- Visit: https://platform.openai.com/api-keys
+- Create account → Add payment method → Create new key
+- Pricing: https://openai.com/api/pricing/
+
+**Anthropic Claude**
+- Visit: https://console.anthropic.com/
+- Create account → Add credits → API Keys → Create key
+- Pricing: https://www.anthropic.com/pricing#anthropic-api
+
+**OpenRouter**
+- Visit: https://openrouter.ai/keys
+- Sign up → Create key → (Optional) Add credits for paid models
+- Many free models available without payment
+
+#### AI Features Available
+
+Once configured, you'll see:
+- ✨ **Smart Replies** - Quick AI-generated response suggestions
+- 📊 **Email Analysis** - Priority, sentiment, and action items in mail view
+- 📝 **AI Compose** - Draft emails with AI assistance
+- ✍️ **Writing Tools** - Improve text, adjust tone, autocomplete
+
+**Cost Estimate**: Most users spend $2-5/month with typical usage (vs $20-30/month for commercial AI email services).
+
+---
+
 See [`.env.local.example`](./.env.local.example) for the complete configuration template.
 
 ## Project Structure
@@ -504,40 +557,58 @@ gyattmail/
 
 ## Roadmap
 
-Based on the full product spec:
+### v1.0 - Core Email Client [COMPLETE]
+- [x] Multi-account UI (Gmail, Outlook, iCloud, Custom IMAP)
+- [x] OAuth2 authentication (Gmail & Outlook)
+- [x] SMTP email sending with multi-recipient support
+- [x] IMAP email receiving with real-time sync
+- [x] Multi-folder support (INBOX, Sent, Drafts, Trash, All Mail)
+- [x] Incremental sync with UIDVALIDITY tracking
+- [x] Flag updates (read/unread, star/unstar) synced to IMAP server
+- [x] Background sync (automatic polling every 15 minutes)
+- [x] Email parsing (headers, body, attachments, snippets)
+- [x] AES-256-GCM credential encryption
+- [x] Multiple accounts per provider
+- [x] View-based organization with filters
+- [x] Resizable panel layout
+- [x] Server-side full-text search
+- [x] Paper-Hatch design system
 
-### v1 (Current - MVP)
-- ✅ Multi-account UI (Gmail, Outlook, iCloud)
-- ✅ View-based organization with filters
-- ✅ Resizable panel layout
-- ✅ Search functionality
-- ✅ Paper-hatch design system
-- ✅ OAuth2 authentication (Gmail & Outlook)
-- ✅ SMTP email sending
-- ✅ AES-256-GCM credential encryption
-- ✅ Multiple accounts per provider
-- ✅ IMAP email receiving
-- ✅ Real-time email sync (SSE)
-- ✅ Multi-folder support (INBOX, Sent, Drafts, Trash, All Mail)
-- ✅ Incremental sync with UIDVALIDITY tracking
-- ✅ Flag updates (mark read/unread, star/unstar) synced to IMAP
-- ✅ Background sync (automatic polling every 15 minutes)
-- ✅ Email parsing (headers, body, attachments, snippets)
+### v1.1 - AI Features [COMPLETE]
+- [x] Multi-provider AI support (Gemini, OpenAI, Claude, OpenRouter)
+- [x] AI-powered email drafting with context awareness
+- [x] Smart reply suggestions
+- [x] Email analysis (priority, sentiment, action items)
+- [x] Email summarization
+- [x] Writing assistance (improve, adjust tone, autocomplete)
+- [x] Label suggestions
+- [x] Thread summarization
+- [x] UI-based AI configuration (Settings panel)
+- [x] Response caching for cost optimization
 
-### v1.1 (Upcoming)
-- 📋 Rules & Automations
-- 🤖 AI features (OpenAI/Gemini integration)
-- 📅 Calendar scheduling hooks
-- 👥 Team collaboration (shared views, assignments)
-- 🔔 Web Push notifications
+### v1.2 - Enhanced UX [IN PROGRESS]
+- [x] Compose dialog with AI toolbar
+- [x] Reply/Forward functionality
+- [x] Keyboard shortcuts panel
+- [x] Drag-and-drop email organization
+- [ ] Advanced search filters UI
+- [ ] Email templates
+- [ ] Snooze/Follow-up reminders
+- [ ] Dark mode support
+
+### v2.0 - Advanced Features [PLANNED]
+- [ ] Rules & Automations engine
+- [ ] Calendar integration (ICS parsing to scheduling)
+- [ ] Web Push notifications
+- [ ] Team collaboration (shared views, assignments)
+- [ ] Email analytics dashboard
+- [ ] Plugin system for extensibility
+- [ ] Progressive Web App (PWA) support
+- [ ] Internationalization (i18n)
 
 ## Contributing
 
-This is an open-source project. Contributions are welcome!
-
-## License
-
-MIT
+Open to contributions. Check out the issue tracker or submit a PR.
 
 ## Acknowledgments
 
