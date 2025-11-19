@@ -19,9 +19,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
-import { Shield, X } from "lucide-react"
+import { Shield, X, Sparkles } from "lucide-react"
 import { useMail } from "@/app/mail/use-mail"
 import { useTrustedSenders } from "@/app/mail/use-trusted-senders"
+import { AISettingsPanel } from "@/app/mail/components/ai/ai-settings-panel"
 
 interface SettingsDialogProps {
   open: boolean
@@ -325,6 +326,17 @@ export function SettingsDialog({
                 </div>
               )}
             </div>
+          </div>
+
+          <Separator />
+
+          {/* AI Features Section */}
+          <div>
+            <h3 className="text-sm font-semibold text-foreground mb-4 uppercase tracking-wider border-b-2 border-border pb-2 flex items-center gap-2">
+              <Sparkles className="h-4 w-4" />
+              AI Features
+            </h3>
+            <AISettingsPanel />
           </div>
         </div>
       </DialogContent>

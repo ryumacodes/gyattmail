@@ -38,6 +38,10 @@ import { useMail } from "@/app/mail/use-mail"
 import { useMailActions } from "@/app/mail/use-mail-actions"
 import { useTrustedSenders } from "@/app/mail/use-trusted-senders"
 import { RemoteImagesBlockedBanner } from "@/app/mail/components/remote-images-blocked-banner"
+import { AISummaryCard } from "@/app/mail/components/ai/ai-summary-card"
+import { AISmartReplies } from "@/app/mail/components/ai/ai-smart-replies"
+import { useAIConfig } from "@/app/mail/use-ai-config"
+import type { AnalyzeEmailResponse } from "@/lib/ai/types"
 import { QuotedTextCollapse } from "@/app/mail/components/quoted-text-collapse"
 import { CalendarEventPreview } from "@/app/mail/components/calendar-event-preview"
 import { LabelBadges } from "@/app/mail/components/label-badges"
@@ -72,6 +76,9 @@ export function MailDisplay({ mail: mailProp, onReply, onReplyAll, onForward }: 
   const [calendarEvents, setCalendarEvents] = React.useState<CalendarEvent[]>([])
   const [showSnoozeMenu, setShowSnoozeMenu] = React.useState(false)
   const [showLabelDialog, setShowLabelDialog] = React.useState(false)
+  const { isConfigured } = useAIConfig()
+  const [aiAnalysis, setAiAnalysis] = React.useState<AnalyzeEmailResponse['data'] | null>(null)
+  const [aiLoading, setAiLoading] = React.useState(false)
 
   const handleBack = () => {
     setMail({ ...mail, selected: null })
@@ -128,6 +135,37 @@ export function MailDisplay({ mail: mailProp, onReply, onReplyAll, onForward }: 
     if (!mailProp || !onForward) return
     onForward(mailProp)
   }
+
+  const fetchAIAnalysis = React.useCallback(async () => {
+    if (!mailProp || !isConfigured) return
+
+    try {
+      setAiLoading(true)
+      const response = await fetch('/api/ai/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: mailProp.email,
+          subject: mailProp.subject,
+          body: mailProp.text || mailProp.snippet || '',
+          analyzePriority: true,
+          analyzeSentiment: true,
+          extractActions: true,
+          classifyCategory: false,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        setAiAnalysis(data.data)
+      }
+    } catch (error) {
+      console.error('AI analysis error:', error)
+    } finally {
+      setAiLoading(false)
+    }
+  }, [mailProp, isConfigured])
 
   // Process email content for image blocking, quote detection, and ICS parsing
   React.useEffect(() => {
@@ -202,6 +240,15 @@ export function MailDisplay({ mail: mailProp, onReply, onReplyAll, onForward }: 
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mailProp, mail.blockRemoteImages])
+
+  // Fetch AI analysis when mail changes
+  React.useEffect(() => {
+    if (mailProp && isConfigured) {
+      fetchAIAnalysis()
+    } else {
+      setAiAnalysis(null)
+    }
+  }, [mailProp, isConfigured, fetchAIAnalysis])
 
   const handleShowImages = () => {
     if (!mailProp || !imagesBlocked) return
@@ -462,6 +509,21 @@ export function MailDisplay({ mail: mailProp, onReply, onReplyAll, onForward }: 
             </div>
           )}
 
+          {/* AI Summary */}
+          {isConfigured && aiAnalysis && (
+            <div className="px-4 pt-4">
+              <AISummaryCard
+                summary={`Email from ${mailProp.name || mailProp.email}${aiAnalysis.category ? ` - ${aiAnalysis.category}` : ''}`}
+                priority={aiAnalysis.priority}
+                priorityConfidence={aiAnalysis.priorityConfidence}
+                sentiment={aiAnalysis.sentiment}
+                sentimentConfidence={aiAnalysis.sentimentConfidence}
+                actionItems={aiAnalysis.actionItems}
+                onDismiss={() => setAiAnalysis(null)}
+              />
+            </div>
+          )}
+
           <div className="flex-1 p-4">
             <div
               className="whitespace-pre-wrap text-foreground leading-relaxed"
@@ -476,6 +538,16 @@ export function MailDisplay({ mail: mailProp, onReply, onReplyAll, onForward }: 
           </div>
           <Separator className="mt-auto" />
           <div className="p-4">
+            {/* AI Smart Replies */}
+            {isConfigured && (
+              <AISmartReplies
+                mail={mailProp}
+                onSelectReply={(text) => {
+                  // TODO: Populate reply field with selected text
+                  console.log('Selected reply:', text)
+                }}
+              />
+            )}
             <form>
               <div className="grid gap-4">
                 <Textarea

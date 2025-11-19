@@ -20,6 +20,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { toast } from "sonner"
+import { AIComposeToolbar } from "@/app/mail/components/ai/ai-compose-toolbar"
+import { useAIConfig } from "@/app/mail/use-ai-config"
 
 interface ComposeDialogProps {
   open: boolean
@@ -54,6 +56,7 @@ export function ComposeDialog({
   const [showBcc, setShowBcc] = React.useState(false)
   const [isSending, setIsSending] = React.useState(false)
   const [isMinimized, setIsMinimized] = React.useState(false)
+  const { isConfigured } = useAIConfig()
 
   // Update selected account when defaultAccount changes
   React.useEffect(() => {
@@ -279,13 +282,25 @@ export function ComposeDialog({
               <Label htmlFor="body" className="w-20 text-right text-sm font-medium text-ink-600 pt-2">
                 Message:
               </Label>
-              <Textarea
-                id="body"
-                placeholder="Write your message..."
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                className="flex-1 min-h-[240px] resize-y border-hatch-400 bg-paper-100 focus:border-hatch-600 font-mono text-sm"
-              />
+              <div className="flex-1 space-y-2">
+                {/* AI Toolbar */}
+                {isConfigured && (
+                  <AIComposeToolbar
+                    body={body}
+                    onBodyChange={setBody}
+                    to={to}
+                    subject={subject}
+                    replyTo={replyTo}
+                  />
+                )}
+                <Textarea
+                  id="body"
+                  placeholder="Write your message..."
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  className="min-h-[240px] resize-y border-hatch-400 bg-paper-100 focus:border-hatch-600 font-mono text-sm"
+                />
+              </div>
             </div>
 
             {/* Actions */}
