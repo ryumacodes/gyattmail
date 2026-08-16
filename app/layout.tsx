@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
@@ -28,6 +29,7 @@ export default function RootLayout({
               className: "!bg-card !text-card-foreground !border-2 !border-border",
             }}
           />
+          <Analytics />
         </ThemeProvider>
       </body>
     </html>
