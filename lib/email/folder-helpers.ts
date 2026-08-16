@@ -1,0 +1,181 @@
+/**
+ * Helper functions for working with email folders across different providers
+ */
+
+import type { EmailProvider } from '@/lib/types/email'
+
+/**
+ * Standard folder names by provider
+ */
+export const STANDARD_FOLDERS = {
+  gmail: {
+    inbox: 'INBOX',
+    sent: '[Gmail]/Sent Mail',
+    drafts: '[Gmail]/Drafts',
+    trash: '[Gmail]/Trash',
+    spam: '[Gmail]/Spam',
+    starred: '[Gmail]/Starred',
+    important: '[Gmail]/Important',
+    allMail: '[Gmail]/All Mail',
+  },
+  outlook: {
+    inbox: 'INBOX',
+    sent: 'Sent Items',
+    drafts: 'Drafts',
+    trash: 'Deleted Items',
+    spam: 'Junk Email',
+    archive: 'Archive',
+  },
+  custom: {
+    inbox: 'INBOX',
+    sent: 'Sent',
+    drafts: 'Drafts',
+    trash: 'Trash',
+    spam: 'Spam',
+  },
+  agentmail: {
+    inbox: 'INBOX',
+    sent: 'Sent',
+    drafts: 'Drafts',
+    trash: 'Trash',
+    spam: 'Spam',
+    archive: 'Archive',
+  },
+}
+
+/**
+ * Get standard folders for a provider
+ */
+export function getStandardFolders(provider: EmailProvider): string[] {
+  switch (provider) {
+    case 'gmail':
+      return [
+        STANDARD_FOLDERS.gmail.inbox,
+        STANDARD_FOLDERS.gmail.sent,
+        STANDARD_FOLDERS.gmail.drafts,
+        STANDARD_FOLDERS.gmail.trash,
+        STANDARD_FOLDERS.gmail.allMail,
+      ]
+    case 'outlook':
+      return [
+        STANDARD_FOLDERS.outlook.inbox,
+        STANDARD_FOLDERS.outlook.sent,
+        STANDARD_FOLDERS.outlook.drafts,
+        STANDARD_FOLDERS.outlook.trash,
+      ]
+    case 'custom':
+      return [
+        STANDARD_FOLDERS.custom.inbox,
+        STANDARD_FOLDERS.custom.sent,
+        STANDARD_FOLDERS.custom.drafts,
+        STANDARD_FOLDERS.custom.trash,
+      ]
+    case 'agentmail':
+      return [
+        STANDARD_FOLDERS.agentmail.inbox,
+        STANDARD_FOLDERS.agentmail.sent,
+        STANDARD_FOLDERS.agentmail.drafts,
+        STANDARD_FOLDERS.agentmail.trash,
+        STANDARD_FOLDERS.agentmail.archive,
+      ]
+  }
+}
+
+/**
+ * Get essential folders for sync (includes Important, Starred, Spam)
+ */
+export function getEssentialFolders(provider: EmailProvider): string[] {
+  switch (provider) {
+    case 'gmail':
+      return [
+        STANDARD_FOLDERS.gmail.inbox,
+        STANDARD_FOLDERS.gmail.sent,
+        STANDARD_FOLDERS.gmail.drafts,
+        STANDARD_FOLDERS.gmail.starred,
+        STANDARD_FOLDERS.gmail.important,
+        STANDARD_FOLDERS.gmail.spam,
+        STANDARD_FOLDERS.gmail.allMail,
+      ]
+    case 'outlook':
+      return [
+        STANDARD_FOLDERS.outlook.inbox,
+        STANDARD_FOLDERS.outlook.sent,
+        STANDARD_FOLDERS.outlook.drafts,
+        STANDARD_FOLDERS.outlook.spam,
+        STANDARD_FOLDERS.outlook.archive,
+      ]
+    case 'custom':
+      return [
+        STANDARD_FOLDERS.custom.inbox,
+        STANDARD_FOLDERS.custom.sent,
+        STANDARD_FOLDERS.custom.drafts,
+        STANDARD_FOLDERS.custom.spam,
+      ]
+    case 'agentmail':
+      return Object.values(STANDARD_FOLDERS.agentmail)
+  }
+}
+
+export function getMutationFolder(
+  provider: EmailProvider,
+  action: 'archive' | 'trash' | 'spam' | 'restore'
+): string {
+  if (provider === 'gmail') {
+    if (action === 'archive') return STANDARD_FOLDERS.gmail.allMail
+    if (action === 'trash') return STANDARD_FOLDERS.gmail.trash
+    if (action === 'spam') return STANDARD_FOLDERS.gmail.spam
+    return STANDARD_FOLDERS.gmail.inbox
+  }
+  const folders = STANDARD_FOLDERS[provider]
+  if (action === 'archive') return 'archive' in folders ? folders.archive : 'Archive'
+  if (action === 'trash') return folders.trash
+  if (action === 'spam') return folders.spam
+  return folders.inbox
+}
+
+/**
+ * Normalize folder name for display
+ */
+export function normalizeFolderName(folder: string): string {
+  // Remove [Gmail]/ prefix
+  if (folder.startsWith('[Gmail]/')) {
+    return folder.replace('[Gmail]/', '')
+  }
+
+  // Map common folder names to friendly names
+  const folderMap: Record<string, string> = {
+    INBOX: 'Inbox',
+    'Sent Items': 'Sent',
+    'Sent Mail': 'Sent',
+    Drafts: 'Drafts',
+    'Deleted Items': 'Trash',
+    Trash: 'Trash',
+    'Junk Email': 'Spam',
+    Spam: 'Spam',
+    'All Mail': 'All Mail',
+    Archive: 'Archive',
+    Starred: 'Starred',
+    Important: 'Important',
+  }
+
+  return folderMap[folder] || folder
+}
+
+/**
+ * Get folder icon name (for UI)
+ */
+export function getFolderIcon(folder: string): string {
+  const normalized = folder.toLowerCase()
+
+  if (normalized.includes('inbox')) return 'inbox'
+  if (normalized.includes('sent')) return 'send'
+  if (normalized.includes('draft')) return 'file-edit'
+  if (normalized.includes('trash') || normalized.includes('deleted')) return 'trash-2'
+  if (normalized.includes('spam') || normalized.includes('junk')) return 'alert-octagon'
+  if (normalized.includes('starred')) return 'star'
+  if (normalized.includes('important')) return 'alert-circle'
+  if (normalized.includes('archive')) return 'archive'
+  if (normalized.includes('all')) return 'mail'
+
+  return 'folder'
+}
