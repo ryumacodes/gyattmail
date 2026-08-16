@@ -5,8 +5,12 @@ import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "gyattmail",
-  description: "Open-source email client with views, filters, and AI",
+  metadataBase: new URL('https://gyatt.email'),
+  title: { default: 'gyatt.email — Email, carved for focus', template: '%s | gyatt.email' },
+  description: 'An open-source, not-for-profit email client with thoughtful AI tools, powerful search, and a calm inbox.',
+  keywords: ['open-source email client', 'AI email client', 'email productivity', 'Gmail client', 'Outlook client'],
+  category: 'productivity',
+  robots: { index: true, follow: true },
   manifest: '/manifest.webmanifest',
   appleWebApp: { capable: true, title: 'gyattmail', statusBarStyle: 'default' },
 };
